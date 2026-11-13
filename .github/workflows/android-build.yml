@@ -70,11 +70,22 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: تثبيت Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: تثبيت أدوات البناء
-        run: sdkmanager "platform-tools" "build-tools;34.0.0" "platforms;android-34"
+      - name: تجهيز Android SDK
+        # خوادم ubuntu تحمل الـ SDK مثبّتاً أصلاً. إضافة setup-android@v3
+        # تفشل لأنها تحاول تثبيت حزمة 'tools' المحذوفة من SDK الحديث،
+        # فنستخدم sdkmanager المثبّت مباشرة مع اكتشاف مساره ديناميكياً.
+        run: |
+          set -e
+          SDK="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"
+          test -d "$SDK" || { echo "::error::مجلد Android SDK غير موجود: $SDK"; exit 1; }
+          SDKMGR=$(ls "$SDK"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | tail -1)
+          test -n "$SDKMGR" || { echo "::error::sdkmanager غير موجود تحت $SDK"; exit 1; }
+          echo "sdkmanager: $SDKMGR"
+          yes | "$SDKMGR" --licenses >/dev/null 2>&1 || true
+          "$SDKMGR" "platform-tools" "build-tools;34.0.0" "platforms;android-34"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          ls "$SDK/build-tools" "$SDK/platform-tools" | head
 
       - name: استرجاع Godot من الذاكرة المؤقتة
         id: cache-godot
