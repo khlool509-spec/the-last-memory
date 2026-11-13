@@ -22,6 +22,7 @@ func _no(name: String, detail: String = "") -> void:
 func _initialize() -> void:
 	print("=== اختبارات THE LAST MEMORY ===\n")
 	_test_project_settings()
+	_test_main_scene()
 	_test_folder_structure()
 	_test_all_scenes()
 	_test_all_scripts()
@@ -53,6 +54,54 @@ func _test_project_settings() -> void:
 		_ok("ضغط ETC2/ASTC مفعّل")
 	else:
 		_no("ضغط ETC2/ASTC مفعّل", "مطلوب لأندرويد")
+
+# ---------- المشهد الرئيسي ----------
+## هذا الاختبار أُضيف بعد خطأ حقيقي: صدرت نسخة بلا مشهد رئيسي،
+## فثُبِّتت وفُتحت ثم ردّت "Unable to setup the Godot engine!".
+func _test_main_scene() -> void:
+	print("\n[المشهد الرئيسي]")
+	var main := str(ProjectSettings.get_setting("application/run/main_scene", ""))
+	if main == "":
+		_no("المشهد الرئيسي معرَّف", "run/main_scene فارغ — التطبيق لن يقلع على الجهاز")
+		return
+	_ok("المشهد الرئيسي معرَّف: " + main)
+
+	if not ResourceLoader.exists(main):
+		_no("ملف المشهد الرئيسي موجود", main)
+		return
+	_ok("ملف المشهد الرئيسي موجود")
+
+	var packed := ResourceLoader.load(main, "PackedScene")
+	if packed == null:
+		_no("تحميل المشهد الرئيسي", "فشل")
+		return
+	var root := (packed as PackedScene).instantiate()
+	if root == null:
+		_no("إنشاء المشهد الرئيسي", "instantiate أعاد null")
+		return
+	_ok("المشهد الرئيسي يُحمَّل ويُنشَأ")
+
+	# مشهد ثلاثي بلا كاميرا = شاشة سوداء، وبلا إضاءة = أجسام سوداء
+	var has_cam := false
+	var has_light := false
+	var stack: Array[Node] = [root]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		if n is Camera3D:
+			has_cam = true
+		if n is DirectionalLight3D or n is OmniLight3D or n is SpotLight3D:
+			has_light = true
+		for c in n.get_children():
+			stack.append(c)
+	if has_cam:
+		_ok("  يحتوي كاميرا")
+	else:
+		_no("  يحتوي كاميرا", "بلا كاميرا = شاشة سوداء على الجهاز")
+	if has_light:
+		_ok("  يحتوي مصدر إضاءة")
+	else:
+		_no("  يحتوي مصدر إضاءة", "بلا إضاءة = أجسام سوداء")
+	root.free()
 
 # ---------- بنية المجلدات ----------
 func _test_folder_structure() -> void:

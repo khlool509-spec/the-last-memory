@@ -153,6 +153,27 @@ jobs:
           export PATH="$HOME/godot-bin:$PATH"
           godot --headless --path . --import
 
+      - name: اختبار نهائي — تصدير نسخة مصدَّرة وتشغيلها
+        # أقوى اختبار ممكن دون جهاز: نصدّر نسخة Linux من نفس المشروع
+        # ونشغّلها فعلياً. هذا يختبر الحزمة المصدَّرة لا مجلد المشروع،
+        # فيكشف أخطاء التصدير نفسه مثل مشهد رئيسي مفقود أو مورد مستبعد.
+        run: |
+          set -e
+          export PATH="$HOME/godot-bin:$PATH"
+          mkdir -p build/linux
+          godot --headless --path . --export-debug "LinuxTest" build/linux/smoke_test.x86_64
+          test -s build/linux/smoke_test.x86_64 || { echo "::error::لم تُنتَج نسخة الاختبار"; exit 1; }
+          chmod +x build/linux/smoke_test.x86_64
+          OUT=$(./build/linux/smoke_test.x86_64 --headless --quit-after 180 2>&1) || {
+            echo "::error::النسخة المصدَّرة خرجت بخطأ"; echo "$OUT" | tail -20; exit 1; }
+          echo "$OUT" | tail -5
+          if echo "$OUT" | grep -qiE "Can't run project|no main scene|SCRIPT ERROR|Failed to load"; then
+            echo "::error::النسخة المصدَّرة أقلعت بأخطاء"
+            echo "$OUT" | grep -iE "Can't run project|no main scene|SCRIPT ERROR|Failed to load" | head -5
+            exit 1
+          fi
+          echo "النسخة المصدَّرة أقلعت وعملت 180 إطاراً بلا أخطاء"
+
       - name: تصدير APK
         run: |
           set -e
@@ -178,6 +199,12 @@ jobs:
           unzip -l "$APK" | grep -qE "assets/.*\.pck|assets/_cl_" \
             || echo "::warning::لم يُعثر على حزمة الموارد بالاسم المتوقع"
           unzip -l "$APK" | grep -q "META-INF/" || { echo "::error::الـ APK غير موقّع"; MISSING=1; }
+          MAIN=$(grep -oP 'run/main_scene="res://\K[^"]+' project.godot || true)
+          test -n "$MAIN" || { echo "::error::لا مشهد رئيسي في project.godot"; MISSING=1; }
+          BASE=$(basename "$MAIN" .tscn)
+          unzip -l "$APK" | grep -q "$BASE" \
+            || { echo "::error::المشهد الرئيسي $MAIN غير موجود داخل الـ APK"; MISSING=1; }
+          echo "المشهد الرئيسي داخل الحزمة: $MAIN"
           echo "عدد المدخلات: $(unzip -l "$APK" | tail -1)"
           exit $MISSING
 
