@@ -30,6 +30,7 @@ func _initialize() -> void:
 	_test_theme()
 	_test_settings_roundtrip()
 	_test_save_roundtrip()
+	_test_icons()
 	print("\n=== النتيجة: %d نجح، %d أخفق ===" % [_pass, _fail])
 	quit(_fail)
 
@@ -365,3 +366,43 @@ func _test_save_roundtrip() -> void:
 	else:
 		_no("  دورة JSON", "فشل التحليل")
 	inst.free()
+
+
+# ---------- الأيقونات ----------
+## أُضيف بعد ملاحظة أن أيقونة التطبيق بقيت الافتراضية.
+func _test_icons() -> void:
+	print("\n[أيقونات التطبيق]")
+	var proj_icon := str(ProjectSettings.get_setting("application/config/icon", ""))
+	if proj_icon == "" or not ResourceLoader.exists(proj_icon):
+		_no("أيقونة المشروع", proj_icon if proj_icon != "" else "غير معرَّفة")
+	elif proj_icon.ends_with("icon.svg"):
+		_no("أيقونة المشروع", "ما زالت أيقونة Godot الافتراضية")
+	else:
+		_ok("أيقونة المشروع: " + proj_icon.get_file())
+
+	var cfg := ConfigFile.new()
+	if cfg.load("res://export_presets.cfg") != OK:
+		_no("قراءة إعداد التصدير", "فشل")
+		return
+	var keys := {
+		"launcher_icons/main_192x192": [192, 192],
+		"launcher_icons/adaptive_foreground_432x432": [432, 432],
+		"launcher_icons/adaptive_background_432x432": [432, 432],
+	}
+	for k in keys:
+		var path := str(cfg.get_value("preset.0.options", k, ""))
+		if path == "":
+			_no("  " + k.get_file(), "فارغة — ستُستخدم أيقونة Godot الافتراضية")
+			continue
+		if not ResourceLoader.exists(path):
+			_no("  " + k.get_file(), "ملف مفقود: " + path)
+			continue
+		var tex: Texture2D = ResourceLoader.load(path)
+		if tex == null:
+			_no("  " + k.get_file(), "تعذّر التحميل")
+			continue
+		var want: Array = keys[k]
+		if tex.get_width() != int(want[0]) or tex.get_height() != int(want[1]):
+			_no("  " + k.get_file(), "القياس %dx%d والمطلوب %dx%d" % [tex.get_width(), tex.get_height(), want[0], want[1]])
+		else:
+			_ok("  %s (%dx%d)" % [path.get_file(), tex.get_width(), tex.get_height()])

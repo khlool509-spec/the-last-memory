@@ -15,49 +15,50 @@ var _buttons: Array[Button] = []
 
 func _ready() -> void:
 	name = "MainMenu"
-	layout_direction = Control.LAYOUT_DIRECTION_RTL
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	# الهندسة LTR عمداً: المراسي تنعكس تحت RTL وتكسر التخطيط.
+	# اتجاه النص RTL يُضبط على العناصر النصية وحدها.
+	layout_direction = Control.LAYOUT_DIRECTION_LTR
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	theme = UITheme.build()
 
 	add_child(AtmosphereBG.new())
-	_build_title()
-	_build_menu()
+
+	var margin := MarginContainer.new()
+	margin.layout_direction = Control.LAYOUT_DIRECTION_LTR
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 56)
+	margin.add_theme_constant_override("margin_right", 46)
+	margin.add_theme_constant_override("margin_top", 40)
+	margin.add_theme_constant_override("margin_bottom", 46)
+	add_child(margin)
+
+	var row := HBoxContainer.new()
+	row.layout_direction = Control.LAYOUT_DIRECTION_LTR
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	margin.add_child(row)
+
+	row.add_child(_build_title())
+
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(spacer)
+
+	row.add_child(_build_menu())
 	_build_footer()
 	_intro_animation()
 
-func _build_title() -> void:
+func _build_title() -> Control:
 	var box := VBoxContainer.new()
-	box.set_anchors_preset(Control.PRESET_CENTER_LEFT)
-	box.anchor_left = 0.06
-	box.anchor_right = 0.06
-	box.anchor_top = 0.5
-	box.anchor_bottom = 0.5
-	box.offset_left = 0
-	box.offset_top = -150
-	box.custom_minimum_size = Vector2(560, 0)
-	box.add_theme_constant_override("separation", 6)
+	box.name = "TitleBlock"
+	box.layout_direction = Control.LAYOUT_DIRECTION_RTL
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.custom_minimum_size = Vector2(540, 0)
+	box.add_theme_constant_override("separation", 4)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(box)
 
-	var t1 := Label.new()
-	t1.name = "TitleTop"
-	t1.text = "الذاكرة"
-	t1.add_theme_font_size_override("font_size", UITheme.SIZE_TITLE + 22)
-	t1.add_theme_color_override("font_color", Palette.BONE)
-	t1.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
-	t1.add_theme_constant_override("shadow_offset_y", 4)
-	t1.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	box.add_child(t1)
-
-	var t2 := Label.new()
-	t2.name = "TitleBottom"
-	t2.text = "الأخيرة"
-	t2.add_theme_font_size_override("font_size", UITheme.SIZE_TITLE + 22)
-	t2.add_theme_color_override("font_color", Palette.BLOOD_HOT)
-	t2.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
-	t2.add_theme_constant_override("shadow_offset_y", 4)
-	t2.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	box.add_child(t2)
+	box.add_child(_title_line("الذاكرة", Palette.BONE))
+	box.add_child(_title_line("الأخيرة", Palette.BLOOD_HOT))
 
 	var rule := ColorRect.new()
 	rule.color = Palette.with_alpha(Palette.BLOOD, 0.85)
@@ -67,24 +68,32 @@ func _build_title() -> void:
 	var sub := Label.new()
 	sub.name = "Subtitle"
 	sub.text = "رحلة في أعماق الماضي…"
+	sub.layout_direction = Control.LAYOUT_DIRECTION_RTL
 	sub.add_theme_font_size_override("font_size", UITheme.SIZE_BODY)
 	sub.add_theme_color_override("font_color", Palette.DUST)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	box.add_child(sub)
+	return box
 
-func _build_menu() -> void:
+func _title_line(txt: String, col: Color) -> Label:
+	var l := Label.new()
+	l.text = txt
+	l.layout_direction = Control.LAYOUT_DIRECTION_RTL
+	l.add_theme_font_size_override("font_size", UITheme.SIZE_TITLE + 18)
+	l.add_theme_color_override("font_color", col)
+	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
+	l.add_theme_constant_override("shadow_offset_y", 4)
+	l.add_theme_constant_override("shadow_outline_size", 2)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	return l
+
+func _build_menu() -> Control:
 	var list := VBoxContainer.new()
 	list.name = "MenuList"
 	list.layout_direction = Control.LAYOUT_DIRECTION_RTL
-	list.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	list.anchor_left = 0.97
-	list.anchor_right = 0.97
-	list.anchor_top = 0.5
-	list.anchor_bottom = 0.5
-	list.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	list.grow_vertical = Control.GROW_DIRECTION_BOTH
+	list.alignment = BoxContainer.ALIGNMENT_CENTER
+	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	list.add_theme_constant_override("separation", 10)
-	add_child(list)
 
 	for item in ITEMS:
 		var b := MenuButton3D.new(str(item["label"]))
@@ -96,7 +105,8 @@ func _build_menu() -> void:
 
 	_refresh_continue_state()
 	if not _buttons.is_empty():
-		_buttons[0].grab_focus()
+		_buttons[0].call_deferred("grab_focus")
+	return list
 
 func _build_footer() -> void:
 	var v := Label.new()
@@ -104,7 +114,8 @@ func _build_footer() -> void:
 	v.text = "v" + str(ProjectSettings.get_setting("application/config/version", "0.0.0"))
 	v.add_theme_font_size_override("font_size", UITheme.SIZE_SMALL)
 	v.add_theme_color_override("font_color", Palette.MUTED)
-	v.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	v.layout_direction = Control.LAYOUT_DIRECTION_LTR
+	v.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	v.offset_left = 18
 	v.offset_top = -38
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE

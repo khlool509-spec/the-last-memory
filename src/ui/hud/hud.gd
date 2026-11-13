@@ -26,7 +26,8 @@ func _ready() -> void:
 	layer = 10
 	_root = Control.new()
 	_root.name = "HUDRoot"
-	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_root.layout_direction = Control.LAYOUT_DIRECTION_LTR
+	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.theme = UITheme.build()
 	add_child(_root)
@@ -44,7 +45,7 @@ func _ready() -> void:
 func _build_look_area() -> void:
 	look_area = TouchLookArea.new()
 	look_area.name = "LookArea"
-	look_area.set_anchors_preset(Control.PRESET_FULL_RECT)
+	look_area.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	look_area.anchor_left = 0.42
 	look_area.offset_top = 110
 	look_area.offset_bottom = -40
@@ -54,7 +55,7 @@ func _build_look_area() -> void:
 func _build_joystick() -> void:
 	joystick = TouchJoystick.new()
 	joystick.name = "Joystick"
-	joystick.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	joystick.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	joystick.anchor_right = 0.4
 	joystick.anchor_top = 0.35
 	joystick.anchor_bottom = 1.0
@@ -66,7 +67,7 @@ func _build_joystick() -> void:
 func _build_actions() -> void:
 	var holder := Control.new()
 	holder.name = "Actions"
-	holder.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	holder.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.offset_left = -330
 	holder.offset_top = -270
@@ -104,8 +105,8 @@ func _build_actions() -> void:
 func _build_status() -> void:
 	var box := VBoxContainer.new()
 	box.name = "Status"
-	box.layout_direction = Control.LAYOUT_DIRECTION_RTL
-	box.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	box.layout_direction = Control.LAYOUT_DIRECTION_LTR
+	box.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	box.offset_left = -330
 	box.offset_right = -22
 	box.offset_top = 20
@@ -118,6 +119,7 @@ func _build_status() -> void:
 	name_row.add_theme_font_size_override("font_size", UITheme.SIZE_SMALL)
 	name_row.add_theme_color_override("font_color", Palette.DUST)
 	name_row.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	name_row.layout_direction = Control.LAYOUT_DIRECTION_RTL
 	box.add_child(name_row)
 
 	_health_fill = _bar(box, Palette.BLOOD_HOT, 1.0)
@@ -141,7 +143,7 @@ func _bar(parent: Node, col: Color, ratio: float) -> ColorRect:
 
 	var fill := ColorRect.new()
 	fill.color = col
-	fill.set_anchors_preset(Control.PRESET_LEFT_WIDE)
+	fill.set_anchors_and_offsets_preset(Control.PRESET_LEFT_WIDE)
 	fill.anchor_right = ratio
 	fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.add_child(fill)
@@ -159,7 +161,7 @@ func set_stamina(ratio: float) -> void:
 func _build_objective() -> void:
 	var p := PanelContainer.new()
 	p.name = "ObjectiveBox"
-	p.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	p.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	p.offset_top = 18
 	p.offset_left = -300
 	p.offset_right = 300
@@ -195,7 +197,7 @@ func _build_pause() -> void:
 	b.glyph = "‖"
 	b.radius = 34.0
 	b.accent = Palette.SMOKE
-	b.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	b.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	b.offset_left = 20
 	b.offset_top = 20
 	b.tapped.connect(func(): pause_pressed.emit())
@@ -204,7 +206,7 @@ func _build_pause() -> void:
 func _build_fps() -> void:
 	_fps = Label.new()
 	_fps.name = "FPS"
-	_fps.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_fps.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	_fps.offset_left = 18
 	_fps.offset_top = -34
 	_fps.add_theme_font_size_override("font_size", UITheme.SIZE_SMALL)

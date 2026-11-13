@@ -6,7 +6,7 @@ const SLOTS := 12
 func _ready() -> void:
 	name = "CollectiblesMenu"
 	layout_direction = Control.LAYOUT_DIRECTION_RTL
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	theme = UITheme.build()
 
 	var bg := AtmosphereBG.new()
@@ -14,13 +14,13 @@ func _ready() -> void:
 	add_child(bg)
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.55)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(dim)
 
 	var root := VBoxContainer.new()
 	root.layout_direction = Control.LAYOUT_DIRECTION_RTL
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.offset_left = 60
 	root.offset_right = -60
 	root.offset_top = 32
@@ -37,13 +37,16 @@ func _ready() -> void:
 	h.add_theme_color_override("font_color", Palette.BLOOD_HOT)
 	root.add_child(h)
 
+	var wrap := CenterContainer.new()
+	wrap.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.add_child(wrap)
+
 	var grid := GridContainer.new()
 	grid.columns = 6
 	grid.layout_direction = Control.LAYOUT_DIRECTION_RTL
-	grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	grid.add_theme_constant_override("h_separation", 14)
 	grid.add_theme_constant_override("v_separation", 14)
-	root.add_child(grid)
+	wrap.add_child(grid)
 
 	for i in SLOTS:
 		grid.add_child(_slot(i, collected.has(i)))
@@ -57,14 +60,13 @@ func _ready() -> void:
 
 func _slot(index: int, owned: bool) -> Control:
 	var p := PanelContainer.new()
-	p.custom_minimum_size = Vector2(0, 130)
-	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	p.custom_minimum_size = Vector2(132, 132)
 
 	var frame := OrnateFrame.new()
 	frame.line_color = Palette.BLOOD if owned else Palette.SMOKE
 	frame.accent_color = Palette.EMBER if owned else Palette.with_alpha(Palette.SMOKE, 0.7)
 	frame.corner_len = 18.0
-	frame.set_anchors_preset(Control.PRESET_FULL_RECT)
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	p.add_child(frame)
 
 	var c := CenterContainer.new()

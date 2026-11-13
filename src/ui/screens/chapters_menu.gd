@@ -4,7 +4,7 @@ extends Control
 func _ready() -> void:
 	name = "ChaptersMenu"
 	layout_direction = Control.LAYOUT_DIRECTION_RTL
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	theme = UITheme.build()
 
 	var bg := AtmosphereBG.new()
@@ -12,13 +12,13 @@ func _ready() -> void:
 	add_child(bg)
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.5)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(dim)
 
 	var root := VBoxContainer.new()
 	root.layout_direction = Control.LAYOUT_DIRECTION_RTL
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.offset_left = 50
 	root.offset_right = -50
 	root.offset_top = 32
@@ -65,7 +65,7 @@ func _card(ch: Dictionary, index: int) -> Control:
 	var frame := OrnateFrame.new()
 	frame.line_color = Palette.BLOOD if unlocked else Palette.SMOKE
 	frame.accent_color = Palette.EMBER if unlocked else Palette.MUTED
-	frame.set_anchors_preset(Control.PRESET_FULL_RECT)
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	panel.add_child(frame)
 
 	var row := HBoxContainer.new()

@@ -15,7 +15,7 @@ func _ready() -> void:
 	_overlay = ColorRect.new()
 	_overlay.color = Color(0, 0, 0, 1)
 	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_overlay)
 	# تلاشٍ داخل عند بدء التشغيل
 	_overlay.modulate.a = 1.0

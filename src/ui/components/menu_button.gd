@@ -18,7 +18,7 @@ func _ready() -> void:
 	_bar = ColorRect.new()
 	_bar.color = Palette.BLOOD_HOT
 	_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_bar.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
+	_bar.set_anchors_and_offsets_preset(Control.PRESET_RIGHT_WIDE)
 	_bar.custom_minimum_size = Vector2(5, 0)
 	_bar.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_bar.modulate.a = 0.0

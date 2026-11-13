@@ -13,7 +13,7 @@ func _ready() -> void:
 	name = "SettingsMenu"
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	layout_direction = Control.LAYOUT_DIRECTION_RTL
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	theme = UITheme.build()
 
 	var bg := AtmosphereBG.new()
@@ -23,12 +23,12 @@ func _ready() -> void:
 
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.45)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(dim)
 
 	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
 
 	var panel := PanelContainer.new()
@@ -37,7 +37,7 @@ func _ready() -> void:
 	center.add_child(panel)
 
 	var frame := OrnateFrame.new()
-	frame.set_anchors_preset(Control.PRESET_FULL_RECT)
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	panel.add_child(frame)
 
 	var col := VBoxContainer.new()
@@ -160,7 +160,7 @@ func _flash(msg: String) -> void:
 	l.text = msg
 	l.add_theme_color_override("font_color", Palette.EMBER)
 	l.add_theme_font_size_override("font_size", UITheme.SIZE_BODY)
-	l.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	l.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	l.offset_top = -90
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(l)

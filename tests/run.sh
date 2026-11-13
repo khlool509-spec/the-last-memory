@@ -57,6 +57,17 @@ if [ "$CODE" -eq 0 ]; then
   done
 fi
 
+# فحص التخطيط: يكشف العناصر صفرية المساحة أو الخارجة عن الكادر
+if [ "$CODE" -eq 0 ]; then
+  echo
+  OUT=$("$GODOT" --headless --path "$ROOT" res://tools/layout_check.tscn 2>&1)
+  RC=$?
+  echo "$OUT" | grep -E "^\[|PASS|FAIL|التخطيط" | sed 's/^/  /'
+  if [ "$RC" -ne 0 ]; then
+    CODE=$((CODE + RC))
+  fi
+fi
+
 echo
 if [ "$CODE" -eq 0 ]; then
   echo "النتيجة النهائية: كل الاختبارات نجحت"

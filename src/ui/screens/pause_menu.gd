@@ -13,18 +13,18 @@ func _ready() -> void:
 	visible = false
 
 	_root = Control.new()
-	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.layout_direction = Control.LAYOUT_DIRECTION_RTL
 	_root.theme = UITheme.build()
 	add_child(_root)
 
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.72)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(dim)
 
 	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(center)
 
 	_panel = PanelContainer.new()
@@ -32,7 +32,7 @@ func _ready() -> void:
 	center.add_child(_panel)
 
 	var frame := OrnateFrame.new()
-	frame.set_anchors_preset(Control.PRESET_FULL_RECT)
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_panel.add_child(frame)
 
 	var col := VBoxContainer.new()
@@ -99,7 +99,7 @@ func _toast(msg: String) -> void:
 	var l := Label.new()
 	l.text = msg
 	l.add_theme_color_override("font_color", Palette.EMBER)
-	l.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	l.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	l.offset_top = -70
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(l)

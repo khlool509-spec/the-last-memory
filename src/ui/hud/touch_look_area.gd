@@ -9,6 +9,7 @@ var _touch_index: int = -1
 var _mouse_active: bool = false
 
 func _ready() -> void:
+	layout_direction = Control.LAYOUT_DIRECTION_LTR
 	mouse_filter = Control.MOUSE_FILTER_PASS
 
 func _gui_input(event: InputEvent) -> void:

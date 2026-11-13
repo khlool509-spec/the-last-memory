@@ -18,6 +18,7 @@ var _scale: float = 1.0
 var _font: Font
 
 func _ready() -> void:
+	layout_direction = Control.LAYOUT_DIRECTION_LTR
 	custom_minimum_size = Vector2(radius * 2.0, radius * 2.0)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_font = UITheme.load_font(UITheme.FONT_BOLD)
