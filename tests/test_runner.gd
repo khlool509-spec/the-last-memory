@@ -101,7 +101,60 @@ func _test_main_scene() -> void:
 		_ok("  يحتوي مصدر إضاءة")
 	else:
 		_no("  يحتوي مصدر إضاءة", "بلا إضاءة = أجسام سوداء")
+	_check_camera_aim(root)
 	root.free()
+
+## اختبار أُضيف بعد خطأ حقيقي: مصفوفة الكاميرا كانت معكوسة الإشارة،
+## فنظرت إلى الأعلى بزاوية 41 درجة عن الهدف، وظهر المشهد عند حافة الشاشة.
+## لا نحسب المصفوفات يدوياً بعد الآن — Transform3D.looking_at هي المرجع.
+##
+## نركّب التحويلات العالمية يدوياً لأن global_transform يتطلب وجود العقدة
+## داخل شجرة المشهد، وهي غير مهيأة أثناء _initialize.
+func _world_xform(n: Node3D, stop: Node) -> Transform3D:
+	var t := n.transform
+	var p := n.get_parent()
+	while p != null and p != stop:
+		if p is Node3D:
+			t = (p as Node3D).transform * t
+		p = p.get_parent()
+	return t
+
+func _check_camera_aim(scene_root: Node) -> void:
+	var cam: Camera3D = null
+	var centers: Array[Vector3] = []
+	var stack: Array[Node] = [scene_root]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		if n is Camera3D and cam == null:
+			cam = n
+		if n is MeshInstance3D and (n as MeshInstance3D).mesh != null:
+			# نتجاهل الأسطح المسطّحة كالأرضيات: تمتد تحت الكاميرا فتشوّه المركز
+			if (n as MeshInstance3D).mesh.get_aabb().size.y > 0.05:
+				centers.append(_world_xform(n as Node3D, scene_root.get_parent()).origin)
+		for c in n.get_children():
+			stack.append(c)
+	if cam == null:
+		_no("  يوجد كاميرا للتأطير", "لا كاميرا")
+		return
+	if centers.is_empty():
+		return
+	var center := Vector3.ZERO
+	for c in centers:
+		center += c
+	center /= float(centers.size())
+	var cam_x := _world_xform(cam, scene_root.get_parent())
+	var to_center := center - cam_x.origin
+	if to_center.length() < 0.001:
+		return
+	var fwd := -cam_x.basis.z
+	var d := fwd.dot(to_center.normalized())
+	var angle := rad_to_deg(acos(clampf(d, -1.0, 1.0)))
+	var limit := cam.fov * 0.5
+	if angle <= limit:
+		_ok("  الكاميرا تؤطّر المحتوى (انحراف %.1f\u00b0 من حد %.1f\u00b0)" % [angle, limit])
+	else:
+		_no("  الكاميرا تؤطّر المحتوى",
+			"انحراف %.1f\u00b0 يتجاوز نصف مجال الرؤية %.1f\u00b0 — المحتوى خارج الكادر" % [angle, limit])
 
 # ---------- بنية المجلدات ----------
 func _test_folder_structure() -> void:

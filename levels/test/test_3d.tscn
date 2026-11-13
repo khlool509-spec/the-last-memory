@@ -1,22 +1,22 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene format=3]
 
-[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+[sub_resource type="PlaneMesh" id="PlaneMesh_67g8t"]
 size = Vector2(12, 12)
 
-[sub_resource type="BoxMesh" id="BoxMesh_box"]
+[sub_resource type="BoxMesh" id="BoxMesh_2sbhl"]
 
-[node name="Test3D" type="Node3D"]
+[node name="Test3D" type="Node3D" unique_id=1790741998]
 
-[node name="Ground" type="MeshInstance3D" parent="."]
-mesh = SubResource("PlaneMesh_ground")
+[node name="Ground" type="MeshInstance3D" parent="." unique_id=1795724930]
+mesh = SubResource("PlaneMesh_67g8t")
 
-[node name="Box" type="MeshInstance3D" parent="."]
+[node name="Box" type="MeshInstance3D" parent="." unique_id=1481931449]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
-mesh = SubResource("BoxMesh_box")
+mesh = SubResource("BoxMesh_2sbhl")
 
-[node name="Sun" type="DirectionalLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.642788, -0.766044, 0, 0.766044, 0.642788, 0, 4, 0)
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=1847214684]
+transform = Transform3D(0.6, -0.614577, 0.5121475, 0, 0.6401844, 0.76822126, -0.8, -0.46093276, 0.38411063, 4, 6, 3)
 shadow_enabled = true
 
-[node name="Camera" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.936329, -0.351123, 0, 0.351123, 0.936329, 0, 2, 4)
+[node name="Camera" type="Camera3D" parent="." unique_id=1248651398]
+transform = Transform3D(1, 0, 0, 0, 0.9607142, 0.27753964, 0, -0.27753964, 0.9607142, 0, 1.8, 4.5)
