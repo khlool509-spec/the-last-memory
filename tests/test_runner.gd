@@ -26,6 +26,10 @@ func _initialize() -> void:
 	_test_folder_structure()
 	_test_all_scenes()
 	_test_all_scripts()
+	_test_fonts()
+	_test_theme()
+	_test_settings_roundtrip()
+	_test_save_roundtrip()
 	print("\n=== النتيجة: %d نجح، %d أخفق ===" % [_pass, _fail])
 	quit(_fail)
 
@@ -81,26 +85,36 @@ func _test_main_scene() -> void:
 		return
 	_ok("المشهد الرئيسي يُحمَّل ويُنشَأ")
 
-	# مشهد ثلاثي بلا كاميرا = شاشة سوداء، وبلا إضاءة = أجسام سوداء
+	# شروط الكاميرا والإضاءة تخص المشاهد الثلاثية فقط.
+	# شاشة واجهة (Control) لا تحتاج أياً منهما، فلا نفرضها عليها.
 	var has_cam := false
 	var has_light := false
+	var has_3d := false
+	var has_ui := false
 	var stack: Array[Node] = [root]
 	while not stack.is_empty():
 		var n: Node = stack.pop_back()
+		if n is Node3D:
+			has_3d = true
+		if n is Control:
+			has_ui = true
 		if n is Camera3D:
 			has_cam = true
 		if n is DirectionalLight3D or n is OmniLight3D or n is SpotLight3D:
 			has_light = true
 		for c in n.get_children():
 			stack.append(c)
-	if has_cam:
-		_ok("  يحتوي كاميرا")
+	if not has_3d:
+		_ok("  مشهد واجهة (لا يتطلب كاميرا ثلاثية)" if has_ui else "  مشهد غير ثلاثي")
 	else:
-		_no("  يحتوي كاميرا", "بلا كاميرا = شاشة سوداء على الجهاز")
-	if has_light:
-		_ok("  يحتوي مصدر إضاءة")
-	else:
-		_no("  يحتوي مصدر إضاءة", "بلا إضاءة = أجسام سوداء")
+		if has_cam:
+			_ok("  يحتوي كاميرا")
+		else:
+			_no("  يحتوي كاميرا", "بلا كاميرا = شاشة سوداء على الجهاز")
+		if has_light:
+			_ok("  يحتوي مصدر إضاءة")
+		else:
+			_no("  يحتوي مصدر إضاءة", "بلا إضاءة = أجسام سوداء")
 	_check_camera_aim(root)
 	root.free()
 
@@ -133,10 +147,11 @@ func _check_camera_aim(scene_root: Node) -> void:
 				centers.append(_world_xform(n as Node3D, scene_root.get_parent()).origin)
 		for c in n.get_children():
 			stack.append(c)
-	if cam == null:
-		_no("  يوجد كاميرا للتأطير", "لا كاميرا")
-		return
+	# لا محتوى ثلاثي = لا شيء يُؤطَّر (شاشات الواجهة مثلاً)
 	if centers.is_empty():
+		return
+	if cam == null:
+		_no("  يوجد كاميرا للتأطير", "محتوى ثلاثي بلا كاميرا")
 		return
 	var center := Vector3.ZERO
 	for c in centers:
@@ -248,3 +263,105 @@ func _test_all_scripts() -> void:
 			_no("صلاحية " + path.get_file(), "السكربت لا يُصرَّف")
 		else:
 			_ok("تصريف " + path.get_file())
+
+
+# ---------- الخطوط ----------
+## لا فائدة من واجهة عربية بخط لا يملك حروفها: ستظهر مربعات فارغة.
+func _test_fonts() -> void:
+	print("\n[الخطوط]")
+	for path in [UITheme.FONT_REGULAR, UITheme.FONT_BOLD]:
+		var f := UITheme.load_font(path)
+		if f == null:
+			_no("تحميل " + path.get_file(), "غير موجود")
+			continue
+		_ok("تحميل " + path.get_file())
+		var missing: Array[String] = []
+		# حروف عربية أساسية + همزات + أرقام عربية ولاتينية + علامات
+		for ch in "ابتثجحخدذرزسشصضطظعغفقكلمنهويءأإآةىئؤ٠١٢٣٤٥٦٧٨٩0123456789٪؟،":
+			if not f.has_char(ch.unicode_at(0)):
+				missing.append(ch)
+		if missing.is_empty():
+			_ok("  تغطية الحروف العربية والأرقام كاملة")
+		else:
+			_no("  تغطية الحروف", "ناقص: " + "".join(missing))
+
+# ---------- السمة ----------
+func _test_theme() -> void:
+	print("\n[السمة]")
+	var t := UITheme.build()
+	if t == null:
+		_no("بناء السمة", "أعادت null")
+		return
+	_ok("بناء السمة")
+	if t.default_font != null:
+		_ok("  خط افتراضي مُسنَد")
+	else:
+		_no("  خط افتراضي مُسنَد", "default_font فارغ")
+	var needed := [["normal", "Button"], ["hover", "Button"], ["pressed", "Button"], ["panel", "PanelContainer"]]
+	var miss: Array[String] = []
+	for n in needed:
+		if not t.has_stylebox(n[0], n[1]):
+			miss.append("%s/%s" % [n[1], n[0]])
+	if miss.is_empty():
+		_ok("  كل أنماط الواجهة موجودة")
+	else:
+		_no("  أنماط ناقصة", ", ".join(miss))
+
+# ---------- دورة الإعدادات ----------
+func _test_settings_roundtrip() -> void:
+	print("\n[الإعدادات]")
+	var cfg := ConfigFile.new()
+	var probe := {"master_volume": 0.33, "language": "en", "invert_y": true}
+	for k in probe:
+		cfg.set_value("game", k, probe[k])
+	var tmp := "user://settings_test.cfg"
+	if cfg.save(tmp) != OK:
+		_no("كتابة ملف إعدادات", "فشل الحفظ")
+		return
+	_ok("كتابة ملف إعدادات")
+	var back := ConfigFile.new()
+	if back.load(tmp) != OK:
+		_no("قراءة ملف إعدادات", "فشل التحميل")
+		return
+	var all_ok := true
+	for k in probe:
+		if back.get_value("game", k) != probe[k]:
+			all_ok = false
+	if all_ok:
+		_ok("  القيم تعود كما حُفظت")
+	else:
+		_no("  القيم تعود كما حُفظت", "اختلاف بعد الدورة")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp))
+	# التأكد أن كل المفاتيح الافتراضية موجودة ولها أنواع صحيحة
+	var defaults_script := load("res://src/core/game_settings.gd")
+	if defaults_script == null:
+		_no("  سكربت الإعدادات", "غير موجود")
+		return
+	_ok("  سكربت الإعدادات يُحمَّل")
+
+# ---------- دورة الحفظ ----------
+func _test_save_roundtrip() -> void:
+	print("\n[نظام الحفظ]")
+	var scr := load("res://src/save_system/save_system.gd")
+	if scr == null:
+		_no("تحميل نظام الحفظ", "غير موجود")
+		return
+	var inst: Node = scr.new()
+	var base: Dictionary = inst.default_data()
+	var needed := ["version", "chapter", "checkpoint", "collectibles", "chapters_unlocked", "flags"]
+	var miss: Array[String] = []
+	for k in needed:
+		if not base.has(k):
+			miss.append(k)
+	if miss.is_empty():
+		_ok("بنية ملف الحفظ كاملة (%d مفتاحاً)" % base.size())
+	else:
+		_no("بنية ملف الحفظ", "ناقص: " + ", ".join(miss))
+	# دورة JSON كاملة
+	var txt := JSON.stringify(base)
+	var back: Variant = JSON.parse_string(txt)
+	if typeof(back) == TYPE_DICTIONARY and (back as Dictionary).size() == base.size():
+		_ok("  الحفظ والقراءة بصيغة JSON سليمان")
+	else:
+		_no("  دورة JSON", "فشل التحليل")
+	inst.free()

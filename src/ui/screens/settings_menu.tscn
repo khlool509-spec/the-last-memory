@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/ui/screens/settings_menu.gd" id="1_hjj2e"]
+
+[node name="SettingsMenu" type="Control" unique_id=632861973]
+layout_mode = 3
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_hjj2e")

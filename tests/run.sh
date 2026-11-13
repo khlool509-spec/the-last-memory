@@ -32,6 +32,31 @@ if [ "$CODE" -eq 0 ]; then
   fi
 fi
 
+# اختبار إقلاع كل شاشة على حدة: يشغّل _ready فعلياً فيكشف أخطاء
+# البناء وقت التشغيل التي لا يكشفها التحميل وحده.
+if [ "$CODE" -eq 0 ]; then
+  echo
+  echo "[اختبار إقلاع الشاشات]"
+  for SCENE in \
+    "res://src/ui/screens/main_menu.tscn" \
+    "res://src/ui/screens/settings_menu.tscn" \
+    "res://src/ui/screens/chapters_menu.tscn" \
+    "res://src/ui/screens/collectibles_menu.tscn" \
+    "res://levels/test/playground.tscn" \
+    "res://levels/test/test_3d.tscn" ; do
+    OUT=$("$GODOT" --headless --path "$ROOT" "$SCENE" --quit-after 90 2>&1)
+    RC=$?
+    BAD=$(echo "$OUT" | grep -ciE "SCRIPT ERROR|Parse Error|ERROR:|Failed to|Cannot call|Invalid (call|get|set|access)|null instance" || true)
+    if [ "$RC" -ne 0 ] || [ "$BAD" -gt 0 ]; then
+      echo "  FAIL  $SCENE  (rc=$RC, أخطاء=$BAD)"
+      echo "$OUT" | grep -iE "SCRIPT ERROR|Parse Error|ERROR:|Failed to|Cannot call|Invalid|null instance" | head -6
+      CODE=$((CODE + 1))
+    else
+      echo "  PASS  $SCENE"
+    fi
+  done
+fi
+
 echo
 if [ "$CODE" -eq 0 ]; then
   echo "النتيجة النهائية: كل الاختبارات نجحت"
