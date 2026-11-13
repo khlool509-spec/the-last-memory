@@ -1,0 +1,28 @@
+# توحيد نهايات الأسطر: ضروري عند العمل بين الهاتف والسحابة
+* text=auto eol=lf
+
+# ملفات Godot النصية
+*.gd      text eol=lf
+*.gdshader text eol=lf
+*.tscn    text eol=lf
+*.tres    text eol=lf
+*.godot   text eol=lf
+*.cfg     text eol=lf
+*.import  text eol=lf
+*.json    text eol=lf
+*.md      text eol=lf
+*.svg     text eol=lf
+
+# ملفات ثنائية — لا تُعالج كنص
+*.png     binary
+*.jpg     binary
+*.webp    binary
+*.ktx     binary
+*.glb     binary
+*.fbx     binary
+*.blend   binary
+*.ogg     binary
+*.wav     binary
+*.mp3     binary
+*.ttf     binary
+*.otf     binary

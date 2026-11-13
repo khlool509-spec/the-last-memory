@@ -1,0 +1,21 @@
+; Engine configuration file.
+; THE LAST MEMORY
+;
+; تحذير: Godot يعيد كتابة هذا الملف عند أول فتح للمشروع.
+; لا تعدّله يدوياً بعد ذلك — استخدم Project Settings داخل المحرر.
+
+config_version=5
+
+[application]
+
+config/name="THE LAST MEMORY"
+config/description="لعبة مغامرات وغموض ثلاثية الأبعاد بمنظور الشخص الثالث، للأندرويد، فردية وتعمل دون اتصال."
+config/version="0.0.1"
+config/features=PackedStringArray("4.7", "Mobile")
+config/icon="res://icon.svg"
+
+[rendering]
+
+renderer/rendering_method="mobile"
+renderer/rendering_method.mobile="mobile"
+textures/vram_compression/import_etc2_astc=true
