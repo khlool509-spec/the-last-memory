@@ -124,31 +124,34 @@ jobs:
           mkdir -p ~/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_STATUS}
           mv templates/* ~/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_STATUS}/
 
-      - name: ربط Godot بالـ SDK و JDK
+      - name: ربط Godot بالـ SDK و JDK وتوليد مفتاح التوقيع
+        # Godot لا يقرأ ANDROID_HOME، بل إعداد المحرر حصراً.
+        # و --quit وحده لا يولّد ملف الإعدادات، لذا نكتبه نحن.
+        # مُتحقَّق محلياً: ملف بخمسة أسطر يكفي، وGodot يملأ الباقي افتراضياً.
         run: |
           set -e
-          export PATH="$HOME/godot-bin:$PATH"
-          # توليد ملف الإعدادات أولاً ثم تعديل مسارين فيه،
-          # أأمن من كتابة الملف يدوياً لأن صيغته تتغير بين الإصدارات
-          godot --headless --quit >/dev/null 2>&1 || true
-          CFG="$HOME/.config/godot/editor_settings-${GODOT_VERSION%.*}.tres"
-          ls -la "$HOME/.config/godot/" || true
-          test -f "$CFG" || CFG=$(ls "$HOME"/.config/godot/editor_settings-*.tres | head -1)
-          echo "ملف الإعدادات: $CFG"
-          python3 - "$CFG" "$ANDROID_SDK_ROOT" "$JAVA_HOME" <<'PY'
-          import sys, re
-          path, sdk, jdk = sys.argv[1], sys.argv[2], sys.argv[3]
-          s = open(path, encoding="utf-8").read()
-          def setkey(s, key, val):
-              pat = re.compile(r'^' + re.escape(key) + r' = ".*"$', re.M)
-              line = f'{key} = "{val}"'
-              return pat.sub(line, s) if pat.search(s) else s.replace("[resource]", "[resource]\n" + line, 1)
-          s = setkey(s, "export/android/android_sdk_path", sdk)
-          s = setkey(s, "export/android/java_sdk_path", jdk)
-          open(path, "w", encoding="utf-8").write(s)
-          print("SDK =", sdk)
-          print("JDK =", jdk)
-          PY
+          CFG_DIR="$HOME/.config/godot"
+          CFG="$CFG_DIR/editor_settings-${GODOT_VERSION%.*}.tres"
+          KS="$HOME/.local/share/godot/keystores/debug.keystore"
+          mkdir -p "$CFG_DIR" "$(dirname "$KS")"
+          if [ ! -f "$KS" ]; then
+            keytool -keyalg RSA -genkeypair -alias androiddebugkey \
+              -keypass android -keystore "$KS" -storepass android \
+              -dname "CN=Android Debug,O=Android,C=US" -validity 9999 \
+              -deststoretype pkcs12
+          fi
+          printf '%s\n' \
+            '[gd_resource type="EditorSettings" format=3]' \
+            '' \
+            '[resource]' \
+            "export/android/android_sdk_path = \"$ANDROID_SDK_ROOT\"" \
+            "export/android/java_sdk_path = \"$JAVA_HOME\"" \
+            "export/android/debug_keystore = \"$KS\"" \
+            'export/android/debug_keystore_user = "androiddebugkey"' \
+            'export/android/debug_keystore_pass = "android"' \
+            > "$CFG"
+          echo "--- $CFG ---"
+          cat "$CFG"
 
       - name: تسخين ذاكرة الاستيراد
         run: |
