@@ -61,9 +61,8 @@ func _build_title() -> Control:
 	box.add_child(_title_line("الأخيرة", Palette.BLOOD_HOT))
 
 	var drip := BloodDrip.new()
-	drip.drip_count = 11
-	drip.max_length = 34.0
-	drip.thickness = 3.4
+	drip.drip_count = 6
+	drip.max_length = 38.0
 	box.add_child(drip)
 
 	var sub := Label.new()

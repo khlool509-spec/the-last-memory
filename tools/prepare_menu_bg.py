@@ -14,10 +14,13 @@ DST = sys.argv[2] if len(sys.argv) > 2 else "assets/textures/ui/menu_bg.png"
 OUT_W = 2560
 
 # مناطق الواجهة المدمجة بنسب من أبعاد الصورة
+# أشكال بيضاوية لا مستطيلات: المستطيل يترك حدّاً مستقيماً مرئياً على
+# الصورة، والبيضاوي مع تمويه واسع يقرأ كظلّ طبيعي في مشهد ليلي.
+# كل عنصر: (مركز س، مركز ص، نصف العرض، نصف الارتفاع)
 REGIONS = [
-    (0.000, 0.10, 0.345, 0.97),  # الشعار والعنوان الفرعي
-    (0.545, 0.12, 0.845, 0.95),  # قائمة الأزرار
-    (0.845, 0.00, 1.000, 1.000), # العمود الأيمن: زر الإيقاف والعصا والحدّ
+    (0.150, 0.52, 0.245, 0.62),  # الشعار والعنوان الفرعي
+    (0.705, 0.50, 0.215, 0.60),  # قائمة الأزرار
+    (0.945, 0.50, 0.130, 0.75),  # العمود الأيمن كاملاً
 ]
 
 # قصّ الحواف: الصورة المرجعية فيها إطار أسود رفيع وحدّ عمودي يمين
@@ -34,13 +37,14 @@ def clean(img: Image.Image) -> Image.Image:
     w, h = img.size
     base = img.convert("RGB")
     treated = base.filter(ImageFilter.GaussianBlur(radius=max(7, w * 0.020)))
-    treated = ImageEnhance.Color(treated).enhance(0.25)      # إزالة التشبّع
-    treated = ImageEnhance.Brightness(treated).enhance(0.30)  # تعتيم عميق
+    treated = ImageEnhance.Color(treated).enhance(0.08)
+    treated = ImageEnhance.Brightness(treated).enhance(0.11)
     mask = Image.new("L", (w, h), 0)
     d = ImageDraw.Draw(mask)
-    for x0, y0, x1, y1 in REGIONS:
-        d.rectangle([x0 * w, y0 * h, x1 * w, y1 * h], fill=255)
-    mask = mask.filter(ImageFilter.GaussianBlur(radius=max(7, w * 0.020)))
+    for cx, cy, rx, ry in REGIONS:
+        d.ellipse([(cx - rx) * w, (cy - ry) * h, (cx + rx) * w, (cy + ry) * h], fill=255)
+    # تمويه واسع جداً: يذيب حدود الشكل فلا يُرى كبقعة
+    mask = mask.filter(ImageFilter.GaussianBlur(radius=max(12, w * 0.042)))
     return Image.composite(treated, base, mask)
 
 
