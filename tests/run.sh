@@ -43,6 +43,7 @@ if [ "$CODE" -eq 0 ]; then
     "res://src/ui/screens/chapters_menu.tscn" \
     "res://src/ui/screens/collectibles_menu.tscn" \
     "res://levels/test/playground.tscn" \
+    "res://levels/moon/moon_surface.tscn" \
     "res://levels/test/test_3d.tscn" ; do
     OUT=$("$GODOT" --headless --path "$ROOT" "$SCENE" --quit-after 90 2>&1)
     RC=$?
@@ -55,6 +56,17 @@ if [ "$CODE" -eq 0 ]; then
       echo "  PASS  $SCENE"
     fi
   done
+fi
+
+# فحص مستوى القمر: بناء التضاريس والتصادم وربط المهام داخل شجرة حيّة
+if [ "$CODE" -eq 0 ]; then
+  echo
+  OUT=$("$GODOT" --headless --path "$ROOT" res://tools/moon_check.tscn 2>&1)
+  RC=$?
+  echo "$OUT" | grep -E "^\[|PASS|FAIL|القمر" | sed 's/^/  /'
+  if [ "$RC" -ne 0 ]; then
+    CODE=$((CODE + RC))
+  fi
 fi
 
 # فحص التخطيط: يكشف العناصر صفرية المساحة أو الخارجة عن الكادر

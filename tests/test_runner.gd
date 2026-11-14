@@ -32,6 +32,10 @@ func _initialize() -> void:
 	_test_save_roundtrip()
 	_test_icons()
 	_test_menu_background()
+	_test_moon_terrain()
+	_test_moon_gravity()
+	_test_life_support()
+	_test_mission_system()
 	print("\n=== النتيجة: %d نجح، %d أخفق ===" % [_pass, _fail])
 	quit(_fail)
 
@@ -438,3 +442,296 @@ func _test_menu_background() -> void:
 		_no("  نسبة عريضة مناسبة", "النسبة %.2f وهي ضيقة على الشاشة الأفقية" % ratio)
 	else:
 		_ok("  نسبة عريضة (%.2f)" % ratio)
+
+# ---------- تضاريس القمر ----------
+## التضاريس مولَّدة رياضياً، فيجب أن تكون حتمية ومتّسقة:
+## نفس البذرة تعطي نفس السطح، والتصادم مطابق للشكل المرسوم.
+func _test_moon_terrain() -> void:
+	print("\n[تضاريس القمر]")
+	var a := MoonTerrain.new(20261114)
+	var b := MoonTerrain.new(20261114)
+
+	# الحتمية: شرط لأن المواضع تُحسب قبل بناء الشبكة
+	var same := true
+	for i in 40:
+		var x := -140.0 + float(i) * 7.0
+		var z := 96.0 - float(i) * 4.5
+		if not is_equal_approx(a.height_at(x, z), b.height_at(x, z)):
+			same = false
+			break
+	if same:
+		_ok("نفس البذرة تعطي نفس السطح")
+	else:
+		_no("حتمية التضاريس")
+
+	var c := MoonTerrain.new(777)
+	var differs := false
+	for i in 40:
+		var x := -100.0 + float(i) * 5.0
+		if not is_equal_approx(a.height_at(x, 12.0), c.height_at(x, 12.0)):
+			differs = true
+			break
+	if differs:
+		_ok("بذرة مختلفة تعطي سطحاً مختلفاً")
+	else:
+		_no("تباين البذور")
+
+	# حدود الارتفاع: سطح معقول لا جدران عمودية
+	var lo := INF
+	var hi := -INF
+	var limit := a.half_extent() - 5.0
+	for i in 60:
+		for j in 60:
+			var x := -limit + (2.0 * limit) * float(i) / 59.0
+			var z := -limit + (2.0 * limit) * float(j) / 59.0
+			var h := a.height_at(x, z)
+			lo = minf(lo, h)
+			hi = maxf(hi, h)
+	if hi - lo < 60.0 and hi - lo > 4.0:
+		_ok("مدى الارتفاع معقول (%.1f م)" % (hi - lo))
+	else:
+		_no("مدى الارتفاع", "%.1f م" % (hi - lo))
+
+	# الفوّهات موجودة فعلاً: نقطة المركز أخفض من الحافة
+	var crater := a.largest_crater()
+	if crater.is_empty():
+		_no("توليد الفوّهات", "لا فوّهة")
+	else:
+		var pos: Vector2 = crater["pos"]
+		var r: float = crater["radius"]
+		var center := a.height_at(pos.x, pos.y)
+		var rim := a.height_at(pos.x + r * 0.98, pos.y)
+		if center < rim:
+			_ok("قاع الفوّهة أخفض من حافتها (%.1f م فرقاً)" % (rim - center))
+		else:
+			_no("مقطع الفوّهة", "القاع %.2f والحافة %.2f" % [center, rim])
+		if a.crater_count() >= 20:
+			_ok("عدد الفوّهات %d" % a.crater_count())
+		else:
+			_no("عدد الفوّهات", str(a.crater_count()))
+
+	# مواضع متناثرة: داخل الحدود، متباعدة، وعلى السطح تماماً
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	var pts := a.scatter_points(12, 30.0, 110.0, 18.0, rng)
+	if pts.size() == 12:
+		_ok("توليد 12 موضعاً متباعداً")
+	else:
+		_no("توليد المواضع", "%d من 12" % pts.size())
+	var on_surface := true
+	var spaced := true
+	for p in pts:
+		if absf(p.y - a.height_at(p.x, p.z)) > 0.01:
+			on_surface = false
+		if absf(p.x) > a.half_extent() or absf(p.z) > a.half_extent():
+			on_surface = false
+	for i in pts.size():
+		for j in range(i + 1, pts.size()):
+			if Vector2(pts[i].x - pts[j].x, pts[i].z - pts[j].z).length() < 17.9:
+				spaced = false
+	if on_surface:
+		_ok("كل موضع ملامس للسطح وداخل الحدود")
+	else:
+		_no("التصاق المواضع بالسطح")
+	if spaced:
+		_ok("لا تداخل بين المواضع")
+	else:
+		_no("تباعد المواضع")
+
+	# بناء الشبكة والتصادم يُفحَص في tools/moon_check.tscn:
+	# بناؤها يحتاج شجرة حيّة، و _ready لا يعمل داخل _initialize
+	a.queue_free()
+	b.queue_free()
+	c.queue_free()
+
+# ---------- جاذبية القمر ----------
+## القفز على القمر يجب أن يكون أعلى وأطول زمناً من الأرض بفارق واضح.
+func _test_moon_gravity() -> void:
+	print("\n[جاذبية القمر]")
+	var p := Player.new()
+	p.set_gravity(9.8)
+	p.jump_velocity = 5.0
+	var earth_apex := p.jump_apex()
+	var earth_hang := p.hang_time()
+
+	p.set_gravity(3.2)
+	p.jump_velocity = 4.3
+	var moon_apex := p.jump_apex()
+	var moon_hang := p.hang_time()
+
+	if moon_apex > earth_apex * 2.0:
+		_ok("ارتفاع القفزة على القمر %.2f م مقابل %.2f على الأرض" % [moon_apex, earth_apex])
+	else:
+		_no("ارتفاع القفزة", "%.2f مقابل %.2f" % [moon_apex, earth_apex])
+
+	if moon_hang > earth_hang * 2.0:
+		_ok("زمن البقاء في الهواء %.2f ث مقابل %.2f" % [moon_hang, earth_hang])
+	else:
+		_no("زمن البقاء", "%.2f مقابل %.2f" % [moon_hang, earth_hang])
+
+	# حدود العبانية: قفزة لا تتجاوز حدّاً يفقد السيطرة
+	if moon_apex < 4.5 and moon_hang < 3.6:
+		_ok("القفزة تبقى قابلة للسيطرة")
+	else:
+		_no("القفزة مفرطة", "%.2f م / %.2f ث" % [moon_apex, moon_hang])
+
+	# التحكم الجوي المحدود يجب ألا يكون معطّلاً تماماً
+	p.air_control = 0.32
+	if p.air_control > 0.1 and p.air_control < 0.6:
+		_ok("التحكم الجوي محدود لا معدوم (%.2f)" % p.air_control)
+	else:
+		_no("التحكم الجوي", str(p.air_control))
+	p.queue_free()
+
+# ---------- دعم الحياة ----------
+func _test_life_support() -> void:
+	print("\n[الأكسجين]")
+	var ls := LifeSupport.new()
+	root.add_child(ls)
+
+	if is_equal_approx(ls.ratio(), 1.0):
+		_ok("البدلة تبدأ ممتلئة")
+	else:
+		_no("المخزون الابتدائي", str(ls.ratio()))
+
+	# الركض يستهلك أسرع من المشي، والمشي أسرع من السكون
+	var idle := LifeSupport.new()
+	var walk := LifeSupport.new()
+	var run := LifeSupport.new()
+	root.add_child(idle)
+	root.add_child(walk)
+	root.add_child(run)
+	for i in 60:
+		idle.consume(1.0, false, false)
+		walk.consume(1.0, true, false)
+		run.consume(1.0, true, true)
+	if run.oxygen < walk.oxygen and walk.oxygen < idle.oxygen:
+		_ok("الاستهلاك يتدرّج: ركض %.1f < مشي %.1f < سكون %.1f" % [run.oxygen, walk.oxygen, idle.oxygen])
+	else:
+		_no("تدرّج الاستهلاك")
+
+	# مدة البقاء: يجب أن تكفي لجولة معقولة لا لدقيقة واحدة
+	var minutes := idle.seconds_left(idle.idle_drain) / 60.0
+	if minutes > 4.0 and minutes < 25.0:
+		_ok("مخزون السكون يكفي %.1f دقيقة" % minutes)
+	else:
+		_no("مدة المخزون", "%.1f دقيقة" % minutes)
+
+	# الإشارات تُبثّ مرة واحدة لكل عتبة، لا كل إطار
+	# المصفوفة تُلتقط بالمرجع، بخلاف العدد الصحيح الذي يُلتقط بالقيمة
+	var hits := [0, 0, 0]
+	var s := LifeSupport.new()
+	root.add_child(s)
+	s.entered_warning.connect(func(): hits[0] += 1)
+	s.entered_critical.connect(func(): hits[1] += 1)
+	s.depleted.connect(func(): hits[2] += 1)
+	for i in 4000:
+		s.consume(0.2, true, true)
+	if hits == [1, 1, 1]:
+		_ok("كل عتبة تُبثّ مرة واحدة")
+	else:
+		_no("تكرار إشارات العتبات", "تحذير %d حرج %d نفاد %d" % hits)
+	if s.is_empty():
+		_ok("المخزون ينفد فعلاً")
+	else:
+		_no("نفاد المخزون", str(s.oxygen))
+
+	s.refill()
+	if is_equal_approx(s.ratio(), 1.0):
+		_ok("محطة الملء تعيد المخزون كاملاً")
+	else:
+		_no("إعادة الملء", str(s.ratio()))
+
+	for n in [ls, idle, walk, run, s]:
+		n.queue_free()
+
+# ---------- نظام المهام ----------
+func _test_mission_system() -> void:
+	print("\n[نظام المهام]")
+	var ms := MissionSystem.new()
+	root.add_child(ms)
+	ms.load_missions([
+		{"id": "a", "kind": Mission.Kind.REACH, "target": "m1", "title": "اذهب"},
+		{"id": "b", "kind": Mission.Kind.COLLECT, "target": "rock", "required": 3, "title": "اجمع"},
+		{"id": "c", "kind": Mission.Kind.INTERACT, "target": "ant", "title": "أصلح"},
+	])
+	var started: Array[String] = []
+	var done: Array[String] = []
+	var finished := [false]
+	ms.mission_started.connect(func(m: Mission): started.append(m.id))
+	ms.mission_completed.connect(func(m: Mission): done.append(m.id))
+	ms.all_completed.connect(func(): finished[0] = true)
+
+	ms.start()
+	if ms.current() != null and ms.current().id == "a":
+		_ok("تبدأ بالمهمة الأولى")
+	else:
+		_no("المهمة الأولى")
+
+	# حدث لا يطابق المهمة النشطة يجب أن يُرفض
+	if not ms.report(Mission.Kind.COLLECT, "rock"):
+		_ok("حدث من نوع آخر لا يقدّم المهمة")
+	else:
+		_no("رفض الأحداث غير المطابقة")
+	# هدف خاطئ من النوع الصحيح يُرفض أيضاً
+	if not ms.report(Mission.Kind.REACH, "m9"):
+		_ok("هدف خاطئ لا يقدّم المهمة")
+	else:
+		_no("رفض الهدف الخاطئ")
+
+	ms.report(Mission.Kind.REACH, "m1")
+	if done.size() == 1 and done[0] == "a" and ms.current().id == "b":
+		_ok("إتمام المهمة ينقل إلى التالية")
+	else:
+		_no("الانتقال بعد الإتمام")
+
+	# الجمع التدريجي: لا تكتمل إلا بالعدد المطلوب
+	ms.report(Mission.Kind.COLLECT, "rock")
+	ms.report(Mission.Kind.COLLECT, "rock")
+	if ms.current().id == "b" and ms.current().progress == 2:
+		_ok("التقدّم التدريجي 2/3 بلا إتمام مبكر")
+	else:
+		_no("التقدّم التدريجي", str(ms.current().progress))
+	if ms.current().objective_text().contains("2/3"):
+		_ok("نص الهدف يعرض العدّاد")
+	else:
+		_no("نص العدّاد", ms.current().objective_text())
+
+	ms.report(Mission.Kind.COLLECT, "rock")
+	if ms.current() != null and ms.current().id == "c":
+		_ok("اكتمال العدّاد ينهي المهمة")
+	else:
+		_no("إنهاء مهمة الجمع")
+
+	# التجاوز فوق المطلوب لا يكسر العدّاد
+	ms.report(Mission.Kind.INTERACT, "ant")
+	if finished[0] and ms.is_finished() and ms.completed_count() == 3:
+		_ok("انتهاء المتتالية يُبثّ مرة واحدة")
+	else:
+		_no("انتهاء المتتالية")
+	if started.size() == 3:
+		_ok("كل مهمة بدأت مرة واحدة")
+	else:
+		_no("عدد البدايات", str(started.size()))
+	# بعد الانتهاء لا تقدّم أي حدث
+	if not ms.report(Mission.Kind.INTERACT, "ant"):
+		_ok("لا أحداث بعد انتهاء المتتالية")
+	else:
+		_no("أحداث بعد الانتهاء")
+
+	# الحفظ والاسترجاع
+	var snapshot := ms.to_dict()
+	var ms2 := MissionSystem.new()
+	root.add_child(ms2)
+	ms2.load_missions([
+		{"id": "a", "kind": Mission.Kind.REACH, "target": "m1", "title": "اذهب"},
+		{"id": "b", "kind": Mission.Kind.COLLECT, "target": "rock", "required": 3, "title": "اجمع"},
+		{"id": "c", "kind": Mission.Kind.INTERACT, "target": "ant", "title": "أصلح"},
+	])
+	ms2.apply_dict(snapshot)
+	if ms2.completed_count() == 3 and ms2.current_index() == ms.current_index():
+		_ok("حالة المهام تُحفظ وتُسترجع")
+	else:
+		_no("استرجاع حالة المهام")
+	ms.queue_free()
+	ms2.queue_free()

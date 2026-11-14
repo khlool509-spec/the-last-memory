@@ -142,10 +142,10 @@ func _on_item_pressed(id: String) -> void:
 	match id:
 		"new_game":
 			SaveSystem.start_new_game()
-			Router.go_to("res://levels/test/playground.tscn")
+			Router.go_to("res://levels/moon/moon_surface.tscn")
 		"continue":
 			SaveSystem.load_game()
-			Router.go_to("res://levels/test/playground.tscn")
+			Router.go_to("res://levels/moon/moon_surface.tscn")
 		"settings":
 			Router.go_to("res://src/ui/screens/settings_menu.tscn")
 		"chapters":

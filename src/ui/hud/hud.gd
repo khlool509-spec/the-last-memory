@@ -21,6 +21,14 @@ var _fps: Label
 var _health_fill: ColorRect
 var _stamina_fill: ColorRect
 var _root: Control
+var _name_label: Label
+var _prompt: PanelContainer
+var _prompt_label: Label
+var _compass: Control
+var _compass_angle: float = 0.0
+var _compass_distance: float = -1.0
+var _toast: PanelContainer
+var _toast_label: Label
 
 func _ready() -> void:
 	layer = 10
@@ -39,6 +47,9 @@ func _ready() -> void:
 	_build_objective()
 	_build_pause()
 	_build_fps()
+	_build_prompt()
+	_build_compass()
+	_build_toast()
 	_fade_in()
 
 # ---------- الإدخال ----------
@@ -121,6 +132,7 @@ func _build_status() -> void:
 	name_row.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	name_row.layout_direction = Control.LAYOUT_DIRECTION_RTL
 	box.add_child(name_row)
+	_name_label = name_row
 
 	_health_fill = _bar(box, Palette.BLOOD_HOT, 1.0)
 	_stamina_fill = _bar(box, Palette.MOON_DIM, 1.0)
@@ -235,3 +247,136 @@ func set_controls_visible(v: bool) -> void:
 	for b in [btn_run, btn_jump, btn_interact]:
 		if b:
 			b.visible = v
+
+# ---------- الأكسجين ----------
+## نفس الشريط الأول، لكن بدلالة الأكسجين ولونه يتدرّج مع الخطر
+func set_oxygen(ratio: float) -> void:
+	if _health_fill == null:
+		return
+	var r := clampf(ratio, 0.0, 1.0)
+	_health_fill.anchor_right = r
+	var col := Palette.MOON
+	if r <= 0.15:
+		col = Palette.BLOOD_HOT
+	elif r <= 0.35:
+		col = Palette.EMBER
+	_health_fill.color = col
+
+func set_player_name(txt: String) -> void:
+	if _name_label:
+		_name_label.text = txt
+
+# ---------- نداء التفاعل ----------
+func _build_prompt() -> void:
+	_prompt = PanelContainer.new()
+	_prompt.name = "InteractPrompt"
+	_prompt.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	_prompt.offset_left = -430
+	_prompt.offset_right = -210
+	_prompt.offset_top = -322
+	_prompt.offset_bottom = -282
+	_prompt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Palette.with_alpha(Palette.VOID, 0.78)
+	sb.border_color = Palette.with_alpha(Palette.MOON_DIM, 0.9)
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(4)
+	sb.set_content_margin_all(8)
+	_prompt.add_theme_stylebox_override("panel", sb)
+	_prompt.modulate.a = 0.0
+	_root.add_child(_prompt)
+
+	_prompt_label = Label.new()
+	_prompt_label.layout_direction = Control.LAYOUT_DIRECTION_RTL
+	_prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_prompt_label.add_theme_font_size_override("font_size", UITheme.SIZE_SMALL)
+	_prompt_label.add_theme_color_override("font_color", Palette.BONE)
+	_prompt.add_child(_prompt_label)
+
+func show_prompt(txt: String) -> void:
+	if _prompt == null:
+		return
+	_prompt_label.text = txt
+	create_tween().tween_property(_prompt, "modulate:a", 1.0, 0.15)
+
+func hide_prompt() -> void:
+	if _prompt == null:
+		return
+	create_tween().tween_property(_prompt, "modulate:a", 0.0, 0.15)
+
+# ---------- بوصلة الهدف ----------
+func _build_compass() -> void:
+	_compass = Control.new()
+	_compass.name = "Compass"
+	_compass.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	_compass.offset_top = 86
+	_compass.offset_left = -60
+	_compass.offset_right = 60
+	_compass.offset_bottom = 60
+	_compass.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_compass.draw.connect(_draw_compass)
+	_root.add_child(_compass)
+
+## الزاوية بالراديان نسبةً إلى اتجاه الكاميرا: 0 = أمام اللاعب مباشرة
+func set_compass(angle: float, distance: float) -> void:
+	_compass_angle = angle
+	_compass_distance = distance
+	if _compass:
+		_compass.visible = distance >= 0.0
+		_compass.queue_redraw()
+
+func clear_compass() -> void:
+	set_compass(0.0, -1.0)
+
+func _draw_compass() -> void:
+	if _compass_distance < 0.0:
+		return
+	var c := Vector2(60, 26)
+	var dir := Vector2(sin(_compass_angle), -cos(_compass_angle))
+	var tip := c + dir * 20.0
+	var left := c + dir.rotated(2.5) * 11.0
+	var right := c + dir.rotated(-2.5) * 11.0
+	var col := Palette.with_alpha(Palette.EMBER, 0.92)
+	_compass.draw_colored_polygon(PackedVector2Array([tip, left, c, right]), col)
+	var txt := "%d م" % int(round(_compass_distance))
+	var font := _compass.get_theme_default_font()
+	if font:
+		var w := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+		_compass.draw_string(font, Vector2(60 - w * 0.5, 54), txt,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Palette.with_alpha(Palette.DUST, 0.95))
+
+# ---------- إشعار ----------
+func _build_toast() -> void:
+	_toast = PanelContainer.new()
+	_toast.name = "Toast"
+	_toast.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	_toast.offset_left = -330
+	_toast.offset_right = 330
+	_toast.offset_top = -120
+	_toast.offset_bottom = -52
+	_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Palette.with_alpha(Palette.VOID, 0.84)
+	sb.border_color = Palette.with_alpha(Palette.EMBER, 0.85)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(4)
+	sb.set_content_margin_all(14)
+	_toast.add_theme_stylebox_override("panel", sb)
+	_toast.modulate.a = 0.0
+	_root.add_child(_toast)
+
+	_toast_label = Label.new()
+	_toast_label.layout_direction = Control.LAYOUT_DIRECTION_RTL
+	_toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_toast_label.add_theme_font_size_override("font_size", UITheme.SIZE_SMALL + 6)
+	_toast_label.add_theme_color_override("font_color", Palette.BONE)
+	_toast.add_child(_toast_label)
+
+func show_toast(txt: String, seconds: float = 2.4) -> void:
+	if _toast == null:
+		return
+	_toast_label.text = txt
+	var tw := create_tween()
+	tw.tween_property(_toast, "modulate:a", 1.0, 0.25)
+	tw.tween_interval(seconds)
+	tw.tween_property(_toast, "modulate:a", 0.0, 0.5)
