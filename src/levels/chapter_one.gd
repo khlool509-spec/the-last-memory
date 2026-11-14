@@ -39,8 +39,13 @@ func _build_environment() -> void:
 	var env := Environment.new()
 	env.background_mode = Environment.BG_SKY
 	var sky := Sky.new()
+	# خريطة الإشعاع هي مصدر الضوء المحيط كلّه. بـINCREMENTAL تُبنى
+	# على مدى إطارات كثيرة فتبقى باهتة، فيخرج الظل أسود مهما رُفعت
+	# طاقة المحيط. السماء هنا لا تتغيّر إلا عند تبديل وقت اليوم،
+	# فبناؤها مرّة بجودة عالية هو الصواب وأرخص من الزيادي.
+	# (128 لا 256: الثانية تُبنى بالتصيير البرمجي في دقائق لا ثوانٍ.)
 	sky.radiance_size = Sky.RADIANCE_SIZE_128
-	sky.process_mode = Sky.PROCESS_MODE_INCREMENTAL
+	sky.process_mode = Sky.PROCESS_MODE_QUALITY
 	var shader: Shader = ResourceLoader.load("res://assets/shaders/sky.gdshader")
 	var sm := ShaderMaterial.new()
 	sm.shader = shader
@@ -54,6 +59,26 @@ func _build_environment() -> void:
 	env.fog_light_energy = 1.0
 	env.fog_density = 0.010
 	env.fog_aerial_perspective = 0.35
+
+	# حجب محيطي: يُعتم الشقوق وملتقى الجدار بالأرض. بدونه يطفو كل
+	# جسم فوق الأرض بلا تماسّ، وهو أظهر فارق عن المرجع السينمائي.
+	env.ssao_enabled = true
+	env.ssao_radius = 1.6
+	env.ssao_intensity = 2.4
+	env.ssao_power = 1.4
+	env.ssao_detail = 0.6
+	env.ssao_horizon = 0.07
+	env.ssao_sharpness = 0.98
+	env.ssao_light_affect = 0.12
+	env.ssao_ao_channel_affect = 0.35
+
+	# ارتداد غير مباشر في فضاء الشاشة: العشب المشمس يُلقي ضوءه على
+	# الجدار الظليل، فيكفّ الظل عن أن يكون أسود ميتاً.
+	env.ssil_enabled = true
+	env.ssil_radius = 4.5
+	env.ssil_intensity = 1.15
+	env.ssil_sharpness = 0.96
+	env.ssil_normal_rejection = 1.0
 
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
 	env.tonemap_white = 5.0
@@ -70,9 +95,18 @@ func _build_environment() -> void:
 	_sun = DirectionalLight3D.new()
 	_sun.name = "KeyLight"
 	_sun.shadow_enabled = true
-	_sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-	_sun.shadow_bias = 0.045
-	_sun.shadow_normal_bias = 1.4
+	_sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+	_sun.shadow_bias = 0.028
+	_sun.shadow_normal_bias = 1.0
+	# الشمس قرص عرضه 0.53 درجة لا نقطة. بصفر كان كل ظل حادّاً كالسكّين
+	# مهما بَعُد؛ بالعرض الزاوي يتّسع شبه الظلّ مع المسافة كما في الواقع.
+	_sun.light_angular_distance = 0.55
+	_sun.shadow_blur = 1.0
+	# التقسيمات تُقرّب دقّة الظل من الكاميرا حيث تُرى الحافّة
+	_sun.directional_shadow_split_1 = 0.055
+	_sun.directional_shadow_split_2 = 0.14
+	_sun.directional_shadow_split_3 = 0.38
+	_sun.directional_shadow_blend_splits = true
 	add_child(_sun)
 
 	_apply_daylight()

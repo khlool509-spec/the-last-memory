@@ -40,6 +40,14 @@ func _ready() -> void:
 	var omni := lvl.find_children("*", "OmniLight3D", true, false).size()
 	var spot := lvl.find_children("*", "SpotLight3D", true, false).size()
 	print("مصابيح: omni=%d spot=%d" % [omni, spot])
+	var vp := get_viewport()
+	print("=== المنفذ وقت التشغيل ===")
+	print("msaa_3d=%d screen_space_aa=%d use_taa=%s scaling=%d" % [
+		vp.msaa_3d, vp.screen_space_aa, vp.use_taa, vp.scaling_3d_mode])
+	print("sky radiance=%d process=%d" % [e.sky.radiance_size, e.sky.process_mode])
+	print("ssao=%s r=%.2f i=%.2f | ssil=%s r=%.2f i=%.2f" % [
+		e.ssao_enabled, e.ssao_radius, e.ssao_intensity,
+		e.ssil_enabled, e.ssil_radius, e.ssil_intensity])
 	print("=== جودة الظل في إعدادات المشروع ===")
 	for k in ["rendering/lights_and_shadows/directional_shadow/size",
 			"rendering/lights_and_shadows/directional_shadow/soft_shadow_filter_quality",

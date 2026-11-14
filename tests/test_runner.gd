@@ -44,17 +44,39 @@ func _test_project_settings() -> void:
 	else:
 		_no("اسم المشروع", name)
 
+	# Forward+ قرار مقصود: مصيّر Mobile في Godot لا يدعم SSAO ولا SSIL
+	# ولا الضباب الحجمي، وهي ما تصنع الإضاءة السينمائية المطلوبة.
 	var method := str(ProjectSettings.get_setting("rendering/renderer/rendering_method", ""))
-	if method == "mobile":
-		_ok("الـ Renderer = mobile")
+	if method == "forward_plus":
+		_ok("الـ Renderer = forward_plus")
 	else:
-		_no("الـ Renderer = mobile", method)
+		_no("الـ Renderer = forward_plus", method)
 
 	var mobile_override := str(ProjectSettings.get_setting("rendering/renderer/rendering_method.mobile", ""))
-	if mobile_override == "mobile":
-		_ok("تجاوز الـ Renderer للمحمول")
+	if mobile_override == "forward_plus":
+		_ok("تجاوز الـ Renderer للمحمول = forward_plus")
 	else:
-		_no("تجاوز الـ Renderer للمحمول", mobile_override)
+		_no("تجاوز الـ Renderer للمحمول = forward_plus", mobile_override)
+
+	# الإضاءة السينمائية: هذه الإعدادات هي ما يفصل الظل الأسود الحادّ
+	# عن الظل الليّن المملوء. تُختبَر صراحةً فلا تُفقَد في تعديل لاحق.
+	var msaa := int(ProjectSettings.get_setting("rendering/anti_aliasing/quality/msaa_3d", 0))
+	if msaa >= 2:
+		_ok("MSAA ≥ 4× (%d)" % msaa)
+	else:
+		_no("MSAA ≥ 4×", str(msaa))
+
+	var aniso := int(ProjectSettings.get_setting("rendering/textures/default_filters/anisotropic_filtering_level", 0))
+	if aniso >= 4:
+		_ok("ترشيح تباين الاتجاه 16× (%d)" % aniso)
+	else:
+		_no("ترشيح تباين الاتجاه 16×", str(aniso))
+
+	var soft := int(ProjectSettings.get_setting("rendering/lights_and_shadows/directional_shadow/soft_shadow_filter_quality", 0))
+	if soft >= 3:
+		_ok("جودة مرشّح الظل الليّن عالية (%d)" % soft)
+	else:
+		_no("جودة مرشّح الظل الليّن عالية", str(soft))
 
 	if bool(ProjectSettings.get_setting("rendering/textures/vram_compression/import_etc2_astc", false)):
 		_ok("ضغط ETC2/ASTC مفعّل")

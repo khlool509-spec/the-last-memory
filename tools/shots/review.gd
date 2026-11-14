@@ -22,6 +22,10 @@ func _ready() -> void:
 	for c in lvl.find_children("*", "CanvasLayer", true, false):
 		(c as CanvasLayer).visible = false
 
+	if not (lvl is Node3D) or not lvl.has_method("get") or lvl.get("world") == null:
+		push_error("المشهد لم يُحمَّل — غالباً خطأ ترجمة في سكربت الفصل")
+		get_tree().quit(2)
+		return
 	var w = lvl.world
 	var p_over = w.poi("overlook")
 	var p_cross = w.poi("crossroad")
@@ -71,7 +75,10 @@ func _ready() -> void:
 		str(ProjectSettings.get_setting("rendering/renderer/rendering_method")),
 		actual, RenderingServer.get_video_adapter_name(),
 		vp.get_visible_rect().size.x, vp.get_visible_rect().size.y])
+	var only := str(OS.get_environment("REVIEW_ONLY"))
 	for s in shots:
+		if only != "" and not str(s["name"]).begins_with(only):
+			continue
 		cam.global_position = s["from"]
 		cam.look_at(s["to"], Vector3.UP)
 		cam.fov = float(s["fov"])

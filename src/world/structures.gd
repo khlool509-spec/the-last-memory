@@ -356,7 +356,7 @@ static func old_house(world: WorldRenderer, center: Vector3, face: float) -> Nod
 	var d := 6.6
 	var h := 3.1
 	var t := 0.26
-	var stone_m := WorldMaterials.stone(Color(0.33, 0.32, 0.30))
+	var stone_m := WorldMaterials.logs(Color(0.52, 0.50, 0.46))
 	var timber := WorldMaterials.timber(WOOD_DARK)
 
 	floor_slab(root, w, d, 0.14, WorldMaterials.plain(FLOOR_COL.darkened(0.15), 0.96))

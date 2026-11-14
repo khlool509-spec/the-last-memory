@@ -175,8 +175,14 @@ static func planks(tint: Color = Color.WHITE) -> ORMMaterial3D:
 static func roof(tint: Color = Color.WHITE) -> ORMMaterial3D:
 	return _orm("roof_07", 2.2, _lift(tint))
 
+## جدران جذوع: المبنى المهجور في وادٍ حرجي يُبنى من جذوع لا من
+## خامة صخر أفقية. beam_wall_01 بلاطتها متر واحد فتُكرَّر 3.2 مرة
+## على جدار 3.2 م — صفّ جذوع بمقاسه الواقعي.
+static func logs(tint: Color = Color.WHITE) -> ORMMaterial3D:
+	return _orm("beam_wall_01", 3.2, _lift(tint, 0.55).darkened(0.30))
+
 static func stone(tint: Color = Color(0.46, 0.46, 0.47)) -> ORMMaterial3D:
-	return _orm("lichen_rock", 2.2, _lift(tint).darkened(0.12))
+	return _orm("coral_stone_wall", 2.0, _lift(tint))
 
 
 static func plain(col: Color, rough: float = 0.9) -> StandardMaterial3D:
