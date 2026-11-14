@@ -17,7 +17,7 @@ const IMAGE_CANDIDATES := [
 @export var rain_amount := 0.40
 @export var blood_glow := 0.18
 ## تعتيم فوق الصورة الفنية حتى يبقى النص مقروءاً
-@export var image_darken := 0.42
+@export var image_darken := 0.18
 
 var _shader_rect: ColorRect
 var using_image: bool = false

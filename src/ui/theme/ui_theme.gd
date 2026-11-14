@@ -8,7 +8,7 @@ const FONT_BOLD := "res://assets/fonts/Amiri-Bold.ttf"
 
 const SIZE_TITLE := 58
 const SIZE_HEADING := 36
-const SIZE_BUTTON := 30
+const SIZE_BUTTON := 27
 const SIZE_BODY := 24
 const SIZE_SMALL := 19
 
@@ -37,10 +37,10 @@ static func _flat(bg: Color, border: Color, bw: int, radius: int) -> StyleBoxFla
 	sb.border_color = border
 	sb.set_border_width_all(bw)
 	sb.set_corner_radius_all(radius)
-	sb.content_margin_left = 26
-	sb.content_margin_right = 26
-	sb.content_margin_top = 12
-	sb.content_margin_bottom = 12
+	sb.content_margin_left = 22
+	sb.content_margin_right = 22
+	sb.content_margin_top = 9
+	sb.content_margin_bottom = 9
 	return sb
 
 static func _build_button(t: Theme, bold: FontFile) -> void:

@@ -53,16 +53,17 @@ func _build_title() -> Control:
 	box.layout_direction = Control.LAYOUT_DIRECTION_RTL
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	box.custom_minimum_size = Vector2(540, 0)
-	box.add_theme_constant_override("separation", 4)
+	box.custom_minimum_size = Vector2(520, 0)
+	box.add_theme_constant_override("separation", -6)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	box.add_child(_title_line("الذاكرة", Palette.BONE))
 	box.add_child(_title_line("الأخيرة", Palette.BLOOD_HOT))
 
 	var drip := BloodDrip.new()
-	drip.drip_count = 9
-	drip.max_length = 52.0
+	drip.drip_count = 11
+	drip.max_length = 34.0
+	drip.thickness = 3.4
 	box.add_child(drip)
 
 	var sub := Label.new()
@@ -79,7 +80,7 @@ func _title_line(txt: String, col: Color) -> Label:
 	var l := Label.new()
 	l.text = txt
 	l.layout_direction = Control.LAYOUT_DIRECTION_RTL
-	l.add_theme_font_size_override("font_size", UITheme.SIZE_TITLE + 18)
+	l.add_theme_font_size_override("font_size", UITheme.SIZE_TITLE + 26)
 	l.add_theme_color_override("font_color", col)
 	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
 	l.add_theme_constant_override("shadow_offset_y", 4)

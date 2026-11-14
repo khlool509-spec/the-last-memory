@@ -10,7 +10,7 @@ func _init(label: String = "") -> void:
 	text = label
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(430, 72)
+	custom_minimum_size = Vector2(330, 60)
 	focus_mode = Control.FOCUS_ALL
 	alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	layout_direction = Control.LAYOUT_DIRECTION_RTL

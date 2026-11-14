@@ -31,6 +31,7 @@ func _initialize() -> void:
 	_test_settings_roundtrip()
 	_test_save_roundtrip()
 	_test_icons()
+	_test_menu_background()
 	print("\n=== النتيجة: %d نجح، %d أخفق ===" % [_pass, _fail])
 	quit(_fail)
 
@@ -406,3 +407,34 @@ func _test_icons() -> void:
 			_no("  " + k.get_file(), "القياس %dx%d والمطلوب %dx%d" % [tex.get_width(), tex.get_height(), want[0], want[1]])
 		else:
 			_ok("  %s (%dx%d)" % [path.get_file(), tex.get_width(), tex.get_height()])
+
+
+# ---------- خلفية القائمة ----------
+## التصميم المعتمد يقوم على صورة فنية. إن غابت يسقط المشروع تلقائياً
+## إلى المشهد الإجرائي، وهذا تراجع بصري كبير يجب ألا يمر بصمت.
+func _test_menu_background() -> void:
+	print("\n[خلفية القائمة]")
+	var found := ""
+	for cand in ["res://assets/textures/ui/menu_bg.png",
+				 "res://assets/textures/ui/menu_bg.jpg",
+				 "res://assets/textures/ui/menu_bg.webp"]:
+		if ResourceLoader.exists(cand):
+			found = cand
+			break
+	if found == "":
+		_no("الصورة الفنية موجودة", "ستُستخدم الخلفية الإجرائية بدلاً منها")
+		return
+	var tex: Texture2D = ResourceLoader.load(found)
+	if tex == null:
+		_no("تحميل الخلفية", found)
+		return
+	_ok("الخلفية: %s (%dx%d)" % [found.get_file(), tex.get_width(), tex.get_height()])
+	if tex.get_width() < 1600:
+		_no("  دقة كافية للهاتف", "العرض %d والمطلوب 1600 على الأقل" % tex.get_width())
+	else:
+		_ok("  دقة كافية للهاتف")
+	var ratio := float(tex.get_width()) / maxf(1.0, float(tex.get_height()))
+	if ratio < 1.6:
+		_no("  نسبة عريضة مناسبة", "النسبة %.2f وهي ضيقة على الشاشة الأفقية" % ratio)
+	else:
+		_ok("  نسبة عريضة (%.2f)" % ratio)
