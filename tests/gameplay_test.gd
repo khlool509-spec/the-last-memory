@@ -217,7 +217,7 @@ func _test_audio() -> void:
 # ---------- وقت اليوم والسطوع ----------
 func _test_daylight() -> void:
 	print("\n[وقت اليوم والسطوع]")
-	_eq("الافتراضي ساعة ذهبية", str(Settings.DEFAULTS["time_of_day"]), "golden")
+	_eq("الافتراضي نهار", str(Settings.DEFAULTS["time_of_day"]), "day")
 	_true("السطوع الافتراضي في المنتصف",
 		is_equal_approx(float(Settings.DEFAULTS["brightness"]), 0.5))
 	_eq("أربعة أوقات", Daylight.KEYS.size(), 4)
@@ -402,7 +402,13 @@ func _test_chapter_one() -> void:
 		_true("مقاطع الأرض محمّلة", one.world.terrain_root.get_child_count() == 100)
 		_true("تصادم التضاريس موجود", one.world.body != null)
 		var sc := one.world.scatter_root.get_child_count()
-		_true("مجموعات النبات (%d)" % sc, sc > 600)
+		# النبات مُطفأ مؤقتاً بطلب: الاختبار يتحقّق من اتّساق الإعداد
+		# مع النتيجة، لا من وجود النبات دائماً.
+		if bool(Settings.get_value("show_vegetation")):
+			_true("مجموعات النبات (%d)" % sc, sc > 600)
+		else:
+			_true("النبات مُطفأ فلا مجموعات (%d)" % sc, sc == 0,
+				"show_vegetation=false لكن وُجدت %d مجموعة" % sc)
 	var gate := _find_named(lvl, "AncientGate")
 	_true("البوابة الأثرية موجودة", gate != null)
 	_true("المباني مبنية (%d)" % (one.buildings.size() if one else 0),

@@ -13,48 +13,52 @@ const PRESETS := {
 		"ground_horizon": Color(0.329, 0.278, 0.224),
 		"ground_bottom": Color(0.153, 0.133, 0.114),
 		"sun_dir": Vector3(0.86, 0.26, -0.44),
-		"sun_color": Color(1.0, 0.804, 0.541),
-		"sun_energy": 2.30,
-		"ambient_color": Color(0.482, 0.522, 0.596),
-		"ambient_energy": 1.15,
-		"fog_color": Color(0.702, 0.624, 0.525),
-		"fog_near": 0.0022,
-		"fog_far": 0.0062,
-		"fog_begin": 48.0,
-		"fog_end": 340.0,
-		"sky_affect": 0.14,
-		"exposure": 1.05,
-		"saturation": 1.12,
+		"sun_color": Color(1.0, 0.878, 0.714),
+		"sun_energy": 1.55,
+		"ambient_color": Color(0.502, 0.561, 0.651),
+		"ambient_energy": 0.62,
+		"fog_color": Color(0.729, 0.690, 0.639),
+		"fog_near": 0.00040,
+		"fog_far": 0.00110,
+		"fog_begin": 90.0,
+		"fog_end": 420.0,
+		"sky_affect": 0.10,
+		"exposure": 0.92,
+		"saturation": 1.02,
 		"lamp_scale": 0.35,
 		"shadow_dist": 150.0,
 		"foliage_tint": Color(1.0, 0.957, 0.886),
-		"volumetric": 0.016,
-		"vol_albedo": Color(1.0, 0.890, 0.741),
+		"sun_disc": 11.0, "sun_size": 0.0021, "sun_glow": 3.4, "horizon_sharp": 4.2, "clouds": 0.56,
+		"cloud_color": Color(1.0, 0.886, 0.722), "cloud_shadow": Color(0.447, 0.388, 0.400),
+		"volumetric": 0.0022,
+		"vol_albedo": Color(1.0, 0.922, 0.820),
 		"vol_emission": Color(0.251, 0.173, 0.090),
 	},
 	"day": {
-		"sky_top": Color(0.247, 0.400, 0.620),
-		"sky_horizon": Color(0.639, 0.718, 0.776),
+		"sky_top": Color(0.184, 0.357, 0.631),
+		"sky_horizon": Color(0.686, 0.769, 0.835),
 		"ground_horizon": Color(0.333, 0.333, 0.306),
 		"ground_bottom": Color(0.188, 0.196, 0.180),
 		"sun_dir": Vector3(0.42, 0.80, 0.43),
 		"sun_color": Color(1.0, 0.953, 0.871),
-		"sun_energy": 1.30,
+		"sun_energy": 1.65,
 		"ambient_color": Color(0.396, 0.467, 0.569),
-		"ambient_energy": 0.42,
+		"ambient_energy": 0.55,
 		"fog_color": Color(0.596, 0.655, 0.714),
-		"fog_near": 0.0016,       # كثافة الضباب على المرتفعات
-		"fog_far": 0.0048,        # في بطن الوادي
-		"fog_begin": 42.0,
-		"fog_end": 320.0,
-		"sky_affect": 0.12,
-		"exposure": 0.86,
-		"saturation": 1.06,
+		"fog_near": 0.00030,      # كثافة الضباب على المرتفعات
+		"fog_far": 0.00090,       # في بطن الوادي
+		"fog_begin": 110.0,
+		"fog_end": 460.0,
+		"sky_affect": 0.08,
+		"exposure": 0.94,
+		"saturation": 1.04,
 		"lamp_scale": 0.10,       # الفوانيس تخفت في وضح النهار
 		"shadow_dist": 150.0,
 		"foliage_tint": Color(1.0, 1.0, 1.0),
-		"volumetric": 0.010,
-		"vol_albedo": Color(0.941, 0.961, 1.0),
+		"sun_disc": 9.0, "sun_size": 0.0015, "sun_glow": 2.0, "horizon_sharp": 2.6, "clouds": 0.54,
+		"cloud_color": Color(1.0, 0.988, 0.969), "cloud_shadow": Color(0.541, 0.580, 0.639),
+		"volumetric": 0.0016,
+		"vol_albedo": Color(0.961, 0.973, 1.0),
 		"vol_emission": Color(0.090, 0.110, 0.149),
 	},
 	"dusk": {
@@ -78,6 +82,8 @@ const PRESETS := {
 		"lamp_scale": 0.65,
 		"shadow_dist": 110.0,
 		"foliage_tint": Color(0.82, 0.74, 0.70),
+		"sun_disc": 7.0, "sun_size": 0.0024, "sun_glow": 4.0, "horizon_sharp": 5.0, "clouds": 0.62,
+		"cloud_color": Color(1.0, 0.741, 0.533), "cloud_shadow": Color(0.306, 0.251, 0.290),
 		"volumetric": 0.028,
 		"vol_albedo": Color(1.0, 0.839, 0.714),
 		"vol_emission": Color(0.192, 0.133, 0.102),
@@ -103,6 +109,8 @@ const PRESETS := {
 		"lamp_scale": 1.0,
 		"shadow_dist": 80.0,
 		"foliage_tint": Color(0.40, 0.46, 0.60),
+		"sun_disc": 2.4, "sun_size": 0.0030, "sun_glow": 1.2, "horizon_sharp": 2.0, "clouds": 0.34,
+		"cloud_color": Color(0.455, 0.506, 0.600), "cloud_shadow": Color(0.098, 0.114, 0.165),
 		"volumetric": 0.038,
 		"vol_albedo": Color(0.741, 0.824, 1.0),
 		"vol_emission": Color(0.035, 0.047, 0.078),
@@ -121,12 +129,25 @@ static func exposure_multiplier(brightness01: float) -> float:
 ## يطبّق الوقت والسطوع على البيئة والشمس دفعة واحدة
 static func apply(env: Environment, sun: DirectionalLight3D, key: String, brightness01: float) -> void:
 	var p := preset(key)
-	if env.sky and env.sky.sky_material is ProceduralSkyMaterial:
-		var sm := env.sky.sky_material as ProceduralSkyMaterial
-		sm.sky_top_color = p["sky_top"]
-		sm.sky_horizon_color = p["sky_horizon"]
-		sm.ground_horizon_color = p["ground_horizon"]
-		sm.ground_bottom_color = p["ground_bottom"]
+	if env.sky and env.sky.sky_material is ShaderMaterial:
+		var sm := env.sky.sky_material as ShaderMaterial
+		sm.set_shader_parameter("top_color", p["sky_top"])
+		sm.set_shader_parameter("horizon_color", p["sky_horizon"])
+		sm.set_shader_parameter("ground_color", p["ground_bottom"])
+		sm.set_shader_parameter("sun_color", p["sun_color"])
+		sm.set_shader_parameter("sun_energy", float(p.get("sun_disc", 7.0)))
+		sm.set_shader_parameter("sun_size", float(p.get("sun_size", 0.0016)))
+		sm.set_shader_parameter("sun_glow", float(p.get("sun_glow", 2.6)))
+		sm.set_shader_parameter("horizon_sharp", float(p.get("horizon_sharp", 3.0)))
+		sm.set_shader_parameter("cloud_amount", float(p.get("clouds", 0.42)))
+		sm.set_shader_parameter("cloud_color", p.get("cloud_color", Color(1.0, 0.96, 0.90)))
+		sm.set_shader_parameter("cloud_shadow", p.get("cloud_shadow", Color(0.42, 0.45, 0.52)))
+	elif env.sky and env.sky.sky_material is ProceduralSkyMaterial:
+		var pm := env.sky.sky_material as ProceduralSkyMaterial
+		pm.sky_top_color = p["sky_top"]
+		pm.sky_horizon_color = p["sky_horizon"]
+		pm.ground_horizon_color = p["ground_horizon"]
+		pm.ground_bottom_color = p["ground_bottom"]
 	env.ambient_light_color = p["ambient_color"]
 	env.ambient_light_energy = float(p["ambient_energy"])
 	env.fog_light_color = p["fog_color"]

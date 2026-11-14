@@ -46,6 +46,14 @@ func _build_terrain() -> void:
 	terrain_root.name = "Terrain"
 	add_child(terrain_root)
 	_ground_mat = WorldMaterials.ground()
+	# تشخيص: FLAT_GROUND=1 يستبدل خامة الأرض ببياض سادة،
+	# فيفصل ما تصنعه الخامة عمّا تصنعه الهندسة والسوية.
+	if OS.get_environment("FLAT_GROUND") == "1":
+		var fm := StandardMaterial3D.new()
+		fm.albedo_color = Color(0.72, 0.72, 0.72)
+		fm.roughness = 0.95
+		fm.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
+		_ground_mat = fm
 	for j in data.grid:
 		for i in data.grid:
 			var idx := j * data.grid + i
@@ -92,12 +100,19 @@ const FADE := 6.0
 
 ## مضاعف المسافات حسب إعداد الجودة
 var quality_scale: float = 1.0
+var vegetation_hidden: bool = false
 
 func _build_scatter() -> void:
 	scatter_root = Node3D.new()
 	scatter_root.name = "Scatter"
 	add_child(scatter_root)
 	quality_scale = _quality_scale()
+
+	# إطفاء مؤقت للنبات: البيانات والمجسّمات والخامات كلها باقية،
+	# يُستأنف الرسم بتبديل الإعداد بلا إعادة خبز ولا فقد شيء.
+	if not bool(Settings.get_value("show_vegetation")):
+		vegetation_hidden = true
+		return
 
 	var rng := RandomNumberGenerator.new()
 	rng.seed = WorldProfile.SEED

@@ -57,6 +57,11 @@ func _ready() -> void:
 		 "to": _eye(w, p_cross.x + 2, p_cross.z - 2, 0.3), "fov": 62.0},
 		{"name": "06_hut_trail", "from": _eye(w, p_hut.x + 14, p_hut.z + 12, 3.2),
 		 "to": Vector3(p_hut.x, p_hut.y + 2.0, p_hut.z), "fov": 60.0},
+		# السماء: واحدة نحو الشمس وواحدة عكسها، فتُرى الغيوم والقرص والتدرّج
+		{"name": "07_sky_sun", "from": _eye(w, p_cross.x, p_cross.z, 2.0),
+		 "to": _eye(w, p_cross.x + 40, p_cross.z + 41, 44.0), "fov": 72.0},
+		{"name": "08_sky_away", "from": _eye(w, p_cross.x, p_cross.z, 2.0),
+		 "to": _eye(w, p_cross.x - 40, p_cross.z - 41, 40.0), "fov": 72.0},
 	]
 
 	cam = Camera3D.new()
@@ -74,10 +79,27 @@ func _ready() -> void:
 	if dir and not dir.dir_exists("shots"):
 		dir.make_dir("shots")
 
+	# تشخيص: NO_SHADOW=1 يطفئ ظل الشمس لفصل التخطيط الناتج عن
+	# خريطة الظل عمّا تصنعه الخامة.
+	if OS.get_environment("NO_SHADOW") == "1":
+		for n in lvl.find_children("*", "DirectionalLight3D", true, false):
+			(n as DirectionalLight3D).shadow_enabled = false
+		print("الظل مُطفأ")
+
 	var only := str(OS.get_environment("SHOT_ONLY"))
+	var wanted := PackedStringArray()
+	if only != "":
+		for tok in only.split(",", false):
+			wanted.append(tok.strip_edges())
 	for s in SHOTS:
-		if only != "" and not str(s["name"]).contains(only):
-			continue
+		if wanted.size() > 0:
+			var hit := false
+			for pat in wanted:
+				if str(s["name"]).contains(pat):
+					hit = true
+					break
+			if not hit:
+				continue
 		cam.global_position = s["from"]
 		cam.look_at(s["to"], Vector3.UP)
 		cam.fov = float(s["fov"])

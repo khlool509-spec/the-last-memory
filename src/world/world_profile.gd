@@ -235,7 +235,12 @@ func _raw_height(x: float, z: float) -> float:
 	var ridge_mask := clampf(base / BASE_AMP * 1.5 - 0.25, 0.0, 1.0)
 	var ridge := absf(_ridge.get_noise_2d(wx, wz)) * RIDGE_AMP * ridge_mask * ridge_mask
 
-	var h := base + ridge + _detail.get_noise_2d(x, z) * DETAIL_AMP
+	# التفصيل يأخذ الإحداثيات المشوّهة مُدارة بزاوية غير قياسية.
+	# بالإحداثيات الخام كانت شبكة سمبلكس تظهر خطوطاً قطرية منتظمة
+	# كل ~19 متراً عبر الخريطة كلها — وهي ما كان يُرى كتموّج «مخمل».
+	var rx := wx * 0.8660254 - wz * 0.5
+	var rz := wx * 0.5 + wz * 0.8660254
+	var h := base + ridge + _detail.get_noise_2d(rx, rz) * DETAIL_AMP
 	h += _features_at(x, z)
 	return h
 

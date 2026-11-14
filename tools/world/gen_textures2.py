@@ -32,6 +32,13 @@ def oct(n, specs, seed=None):
     acc /= tot; acc -= acc.min()
     return acc / (acc.max() + 1e-9)
 
+def eq(a):
+    """مساواة المدرّج: توزيع منتظم 0..1.
+    بعد إزالة الترددات المنخفضة يتكدّس التباين حول المتوسط فتبهت
+    البلاطة؛ المساواة تُعيد المدى اللوني دون إعادة بنية كبيرة."""
+    r = a.ravel().argsort().argsort().astype(np.float32)
+    return (r / max(r.size - 1, 1)).reshape(a.shape)
+
 def to_normal(h, s=3.0):
     gy, gx = np.gradient(h.astype(np.float32))
     nx, ny, nz = -gx * s, -gy * s, np.ones_like(h)
@@ -44,41 +51,67 @@ def save(a, name, mode="RGB"):
 
 N = 512
 print("أرض الغابة:")
-macro = oct(N, [(2.8, 1.0, 0.0), (2.0, 0.6, 0.010)], seed=10)
-mid   = oct(N, [(1.6, 1.0, 0.030)], seed=20)
-fine  = oct(N, [(0.8, 1.0, 0.090)], seed=30)
+# قاعدة: بلاطة التفصيل يجب ألّا تحمل أي بنية كبيرة.
+# كل ما كان أوسع من سُدس البلاطة يُرى عبر الوادي كشبكة مكرّرة،
+# مهما دُوّرت العيّنات أو مُزجت. التفاوت الواسع مكانه الـshader
+# وألوان القمم (البيئات)، لا داخل البلاطة.
+LO = 0.016          # ≥ 8 دورات في البلاطة ≈ 0.6 متر عند مقياس 4.6
+base_v = eq(oct(N, [(2.2, 1.0, LO), (1.7, 0.55, 0.034)], seed=10))
+mid    = eq(oct(N, [(1.6, 1.0, 0.030)], seed=20))
+fine   = eq(oct(N, [(0.8, 1.0, 0.090)], seed=30))
 
-soil = np.array([38, 32, 24], np.float32)
-loam = np.array([74, 62, 42], np.float32)
-dust = np.array([118, 104, 74], np.float32)
-t = np.clip(macro * 1.25 - 0.12, 0, 1)[..., None]
+soil = np.array([44, 37, 27], np.float32)
+loam = np.array([82, 69, 47], np.float32)
+dust = np.array([124, 110, 80], np.float32)
+t = base_v[..., None]
 col = soil + (loam - soil) * np.clip(t * 2, 0, 1)
 col = np.where(t > 0.5, loam + (dust - loam) * ((t - 0.5) * 2), col)
-col *= (0.62 + 0.76 * mid)[..., None]
+col *= (0.74 + 0.52 * mid)[..., None]
 
-# بقع عشب وطحلب: تباين لوني حقيقي لا تدرّج واحد
-gm = np.clip((oct(N, [(3.2, 1.0, 0.006)], seed=40) - 0.47) * 4.0, 0, 1)[..., None]
-grass_c = np.array([52, 74, 34], np.float32) * (0.70 + 0.62 * mid)[..., None]
+# طحلب: خصلات صغيرة متفرّقة، لا بقع كبيرة تصنع شبكة
+gm = np.clip((eq(oct(N, [(2.4, 1.0, 0.038)], seed=40)) - 0.62) * 3.4, 0, 1)[..., None]
+grass_c = np.array([58, 78, 40], np.float32) * (0.74 + 0.56 * mid)[..., None]
 col = col * (1 - gm) + grass_c * gm
 
 # أوراق ساقطة
-lm = np.clip((oct(N, [(1.2, 1.0, 0.055)], seed=50) - 0.62) * 5.0, 0, 1)[..., None]
-leaf_c = np.array([104, 72, 38], np.float32)
+lm = np.clip((eq(oct(N, [(1.2, 1.0, 0.062)], seed=50)) - 0.72) * 4.4, 0, 1)[..., None]
+leaf_c = np.array([106, 76, 42], np.float32)
 col = col * (1 - lm) + leaf_c * lm
 
 # حصى: نقاط فاتحة حادة ترفع التباين القريب
-peb = (oct(N, [(0.75, 1.0, 0.15)], seed=60) > 0.74)
-col[peb] = np.clip(col[peb] * 1.75 + 26, 0, 255)
-col *= (0.88 + 0.24 * fine)[..., None]
+peb = (eq(oct(N, [(0.75, 1.0, 0.15)], seed=60)) > 0.88)
+col[peb] = np.clip(col[peb] * 1.70 + 24, 0, 255)
+col *= (0.90 + 0.20 * fine)[..., None]
 save(np.clip(col, 0, 255).astype(np.uint8), "ground_albedo.png")
 
-hgt = macro * 0.5 + mid * 0.32 + fine * 0.18
-save(to_normal(hgt, 4.0), "ground_normal.png")
-# خشونة: الحصى أملس والتراب خشن
+# النتوء من الترددات المتوسطة والدقيقة فقط
+hgt = mid * 0.56 + fine * 0.30 + base_v * 0.14
+save(to_normal(hgt, 3.4), "ground_normal.png")
 rough = np.clip(0.94 - peb.astype(np.float32) * 0.34 - gm[..., 0] * 0.10, 0.25, 1.0)
-ao = np.clip(0.55 + 0.52 * hgt, 0, 1)
+ao = np.clip(0.62 + 0.42 * hgt, 0, 1)
 save((np.stack([rough, rough, rough], -1) * 255).astype(np.uint8), "ground_rough.png")
 save((np.stack([ao, ao, ao], -1) * 255).astype(np.uint8), "ground_ao.png")
+
+# نسخة ثانية للأرض: عشبية أكثر وأفتح.
+# الـshader يمزج بينها وبين الأولى بقناع منخفض التردّد، فيُولَد
+# تفاوت واسع حقيقي (مروج ثم تربة عارية) دون بنية كبيرة داخل البلاطة.
+base2 = eq(oct(N, [(2.0, 1.0, LO), (1.5, 0.5, 0.040)], seed=11))
+mid2  = eq(oct(N, [(1.5, 1.0, 0.034)], seed=21))
+fine2 = eq(oct(N, [(0.8, 1.0, 0.10)], seed=31))
+turf = np.array([58, 76, 38], np.float32)
+turf_d = np.array([40, 54, 27], np.float32)
+turf_l = np.array([104, 118, 62], np.float32)
+t2 = base2[..., None]
+col2 = turf_d + (turf - turf_d) * np.clip(t2 * 2, 0, 1)
+col2 = np.where(t2 > 0.5, turf + (turf_l - turf) * ((t2 - 0.5) * 2), col2)
+col2 *= (0.76 + 0.48 * mid2)[..., None]
+# خصلات جافة
+dry = np.clip((eq(oct(N, [(1.4, 1.0, 0.055)], seed=51)) - 0.66) * 4.0, 0, 1)[..., None]
+col2 = col2 * (1 - dry) + np.array([132, 118, 72], np.float32) * dry
+col2 *= (0.90 + 0.20 * fine2)[..., None]
+save(np.clip(col2, 0, 255).astype(np.uint8), "ground_albedo2.png")
+hgt2 = mid2 * 0.58 + fine2 * 0.32 + base2 * 0.10
+save(to_normal(hgt2, 3.2), "ground_normal2.png")
 
 print("لحاء:")
 B = 512
