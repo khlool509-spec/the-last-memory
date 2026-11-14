@@ -75,6 +75,29 @@ func _test_structure() -> void:
 	_true("مجموعات النبات (%d)" % sc, sc > 600)
 	_true("سطح النهر موجود", world.water_root != null and world.water_root.get_child_count() > 0)
 
+	# عطب حقيقي وقع: كان لفّ مثلثات الأرض معكوساً فتُقصّ كلها ولا
+	# تُرسم إطلاقاً، وكان يُرى مكانها السماء.
+	# اصطلاح Godot — متحقَّق منه بالتصيير لا بالافتراض: الوجه الأمامي
+	# حاصلُ ضربه الاتجاهي (b-a)×(c-a) يشير بعيداً عن الناظر، أي إلى
+	# الأسفل لأرض تُرى من فوقها.
+	var flipped := 0
+	var checked_tris := 0
+	for ci in [0, 45, 99]:
+		var mesh: ArrayMesh = world.data.chunk_meshes[ci]
+		var arr := mesh.surface_get_arrays(0)
+		var vs: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+		var ix: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
+		for t in range(0, mini(ix.size(), 600), 3):
+			var a := vs[ix[t]]
+			var b := vs[ix[t + 1]]
+			var c := vs[ix[t + 2]]
+			var nrm := (b - a).cross(c - a)
+			checked_tris += 1
+			if nrm.y >= 0.0:
+				flipped += 1
+	_true("لفّ وجوه الأرض صحيح فتُرسم (%d/%d)" % [checked_tris - flipped, checked_tris],
+		flipped == 0, "%d مثلثاً مقلوباً — الأرض ستختفي" % flipped)
+
 func _test_data_integrity() -> void:
 	print("\n[سلامة البيانات]")
 	var d := world.data

@@ -92,8 +92,10 @@ func _chunk_mesh(ci: int, cj: int) -> ArrayMesh:
 			var b := a + 1
 			var c := a + n
 			var d := c + 1
-			idxs.append(a); idxs.append(c); idxs.append(b)
-			idxs.append(b); idxs.append(c); idxs.append(d)
+			# لفّ الوجه الأمامي: كان معكوساً فكانت الأرض تُقصّ بالكامل
+			# ولا تُرسم إطلاقاً — ما كان يُرى مكانها هو السماء والضباب.
+			idxs.append(a); idxs.append(b); idxs.append(c)
+			idxs.append(b); idxs.append(d); idxs.append(c)
 
 	var arr := []
 	arr.resize(Mesh.ARRAY_MAX)

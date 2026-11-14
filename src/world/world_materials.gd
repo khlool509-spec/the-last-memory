@@ -26,7 +26,7 @@ static func ground() -> StandardMaterial3D:
 	m.ao_texture = _tex("ground_ao.png")
 	m.ao_light_affect = 0.55
 	m.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
-	m.uv1_scale = Vector3(2.2, 2.2, 1.0)
+	m.uv1_scale = Vector3(0.80, 0.80, 1.0)
 	m.metallic = 0.0
 	m.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
 	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC

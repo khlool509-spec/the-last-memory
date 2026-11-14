@@ -45,20 +45,18 @@ func _ready() -> void:
 	var p_hut := w.poi("hut")
 
 	SHOTS = [
-		{"name": "01_vista", "from": Vector3(p_over.x - 6, p_over.y + 11, p_over.z + 6),
-		 "to": Vector3(p_bridge.x, p_bridge.y + 6, p_bridge.z), "fov": 62.0},
-		{"name": "02_forest_close", "from": _eye(w, p_cross.x + 14, p_cross.z - 22, 1.65),
-		 "to": _eye(w, p_cross.x - 4, p_cross.z - 46, 3.2), "fov": 68.0},
-		{"name": "03_river_bridge", "from": _eye(w, p_bridge.x + 24, p_bridge.z + 20, 6.0),
-		 "to": Vector3(p_bridge.x, w.data.water_level + 1.5, p_bridge.z), "fov": 60.0},
-		{"name": "04_house", "from": _eye(w, p_house.x + 13, p_house.z + 13, 3.2),
-		 "to": Vector3(p_house.x, p_house.y + 2.4, p_house.z), "fov": 58.0},
-		{"name": "05_player_pov", "from": _eye(w, p_spawn.x + 1.2, p_spawn.z + 4.6, 2.0),
-		 "to": _eye(w, p_cross.x, p_cross.z, 2.0), "fov": 70.0},
-		{"name": "07_ground", "from": _eye(w, p_cross.x + 30, p_cross.z + 30, 3.0),
-		 "to": _eye(w, p_cross.x + 30.1, p_cross.z + 30.1, 0.0), "fov": 70.0},
-		{"name": "06_hut_trail", "from": _eye(w, p_hut.x + 11, p_hut.z + 9, 2.6),
-		 "to": Vector3(p_hut.x, p_hut.y + 1.8, p_hut.z), "fov": 62.0},
+		{"name": "01_vista", "from": Vector3(p_over.x - 10, p_over.y + 16, p_over.z + 12),
+		 "to": Vector3(p_bridge.x, p_bridge.y + 4, p_bridge.z), "fov": 64.0},
+		{"name": "02_road", "from": _eye(w, p_spawn.x - 6, p_spawn.z - 10, 2.2),
+		 "to": _eye(w, p_cross.x, p_cross.z, 2.0), "fov": 66.0},
+		{"name": "03_river_bridge", "from": _eye(w, p_bridge.x + 26, p_bridge.z + 22, 7.0),
+		 "to": Vector3(p_bridge.x, w.data.water_level + 2.0, p_bridge.z), "fov": 58.0},
+		{"name": "04_house", "from": _eye(w, p_house.x + 15, p_house.z + 15, 4.0),
+		 "to": Vector3(p_house.x, p_house.y + 2.6, p_house.z), "fov": 56.0},
+		{"name": "05_ground", "from": _eye(w, p_cross.x + 6, p_cross.z + 8, 1.9),
+		 "to": _eye(w, p_cross.x + 2, p_cross.z - 2, 0.3), "fov": 62.0},
+		{"name": "06_hut_trail", "from": _eye(w, p_hut.x + 14, p_hut.z + 12, 3.2),
+		 "to": Vector3(p_hut.x, p_hut.y + 2.0, p_hut.z), "fov": 60.0},
 	]
 
 	cam = Camera3D.new()
