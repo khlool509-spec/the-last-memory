@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://src/ui/screens/settings_menu.gd" id="1_hjj2e"]
 
-[node name="SettingsMenu" type="Control" unique_id=632861973]
+[node name="SettingsMenu" type="Control" unique_id=1452035155]
 layout_mode = 3
 anchors_preset = 0
 anchor_right = 1.0

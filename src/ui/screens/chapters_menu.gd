@@ -102,18 +102,34 @@ func _card(ch: Dictionary, index: int) -> Control:
 
 	var desc := Label.new()
 	desc.text = str(ch["desc"]) if unlocked else "مقفل — أكمل الفصل السابق"
+	if unlocked and not Chapters.is_playable(n):
+		desc.text = str(ch["desc"]) + "  (قيد البناء)"
 	desc.add_theme_font_size_override("font_size", UITheme.SIZE_SMALL)
 	desc.add_theme_color_override("font_color", Palette.DUST if unlocked else Palette.MUTED)
 	texts.add_child(desc)
 
+	var playable := unlocked and Chapters.is_playable(n)
+
 	var status := Label.new()
-	status.text = "▶" if unlocked else "🔒"
+	status.text = ("▶" if playable else "…") if unlocked else "🔒"
 	status.custom_minimum_size = Vector2(70, 0)
 	status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	status.add_theme_font_size_override("font_size", UITheme.SIZE_HEADING)
 	status.add_theme_color_override("font_color", Palette.EMBER if unlocked else Palette.MUTED)
 	row.add_child(status)
+
+	# زر شفاف فوق البطاقة: البطاقة كلها قابلة للنقر
+	var hit := Button.new()
+	hit.name = "Open"
+	hit.flat = true
+	hit.focus_mode = Control.FOCUS_NONE
+	hit.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	hit.disabled = not playable
+	hit.mouse_filter = Control.MOUSE_FILTER_STOP if playable else Control.MOUSE_FILTER_IGNORE
+	if playable:
+		hit.pressed.connect(func() -> void: Router.go_to(Chapters.scene_path(n)))
+	panel.add_child(hit)
 
 	panel.modulate.a = 0.0
 	var tw := create_tween()

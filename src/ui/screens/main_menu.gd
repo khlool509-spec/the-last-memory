@@ -15,6 +15,8 @@ var _buttons: Array[Button] = []
 
 func _ready() -> void:
 	name = "MainMenu"
+	Audio.stop_ambient()
+	Audio.play_music("menu")
 	# الهندسة LTR عمداً: المراسي تنعكس تحت RTL وتكسر التخطيط.
 	# اتجاه النص RTL يُضبط على العناصر النصية وحدها.
 	layout_direction = Control.LAYOUT_DIRECTION_LTR
@@ -142,10 +144,10 @@ func _on_item_pressed(id: String) -> void:
 	match id:
 		"new_game":
 			SaveSystem.start_new_game()
-			Router.go_to("res://levels/test/playground.tscn")
+			_launch_game()
 		"continue":
 			SaveSystem.load_game()
-			Router.go_to("res://levels/test/playground.tscn")
+			_launch_game()
 		"settings":
 			Router.go_to("res://src/ui/screens/settings_menu.tscn")
 		"chapters":
@@ -154,3 +156,10 @@ func _on_item_pressed(id: String) -> void:
 			Router.go_to("res://src/ui/screens/collectibles_menu.tscn")
 		"quit":
 			Router.quit_game()
+
+## يبدأ أول فصل مبني فعلياً؛ يسقط إلى ساحة الاختبار إن لم يوجد
+func _launch_game() -> void:
+	var path := Chapters.first_playable()
+	if path == "":
+		path = "res://levels/test/playground.tscn"
+	Router.go_to(path)

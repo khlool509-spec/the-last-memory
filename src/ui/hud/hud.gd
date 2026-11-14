@@ -8,6 +8,7 @@ signal look_input(delta: Vector2)
 signal run_changed(active: bool)
 signal jump_pressed()
 signal interact_pressed()
+signal inventory_pressed()
 signal pause_pressed()
 
 var joystick: TouchJoystick
@@ -15,7 +16,10 @@ var look_area: TouchLookArea
 var btn_run: ActionButton
 var btn_jump: ActionButton
 var btn_interact: ActionButton
+var btn_inventory: ActionButton
 
+var _prompt: InteractPrompt
+var _toasts: Control
 var _objective: Label
 var _fps: Label
 var _health_fill: ColorRect
@@ -37,6 +41,8 @@ func _ready() -> void:
 	_build_actions()
 	_build_status()
 	_build_objective()
+	_build_prompt()
+	_build_toasts()
 	_build_pause()
 	_build_fps()
 	_fade_in()
@@ -100,6 +106,15 @@ func _build_actions() -> void:
 	btn_run.position = Vector2(168, 6)
 	btn_run.pressed_changed.connect(func(v): run_changed.emit(v))
 	holder.add_child(btn_run)
+
+	btn_inventory = ActionButton.new()
+	btn_inventory.glyph = "▤"
+	btn_inventory.label_text = "الحقيبة"
+	btn_inventory.radius = 42.0
+	btn_inventory.accent = Palette.DUST
+	btn_inventory.position = Vector2(-96, 86)
+	btn_inventory.tapped.connect(func(): inventory_pressed.emit())
+	holder.add_child(btn_inventory)
 
 # ---------- الحالة ----------
 func _build_status() -> void:
@@ -190,6 +205,40 @@ func set_objective(txt: String) -> void:
 	tw.tween_property(_objective, "modulate:a", 0.0, 0.12)
 	tw.tween_property(_objective, "modulate:a", 1.0, 0.3)
 
+# ---------- التفاعل والإشعارات ----------
+func _build_prompt() -> void:
+	_prompt = InteractPrompt.new()
+	_prompt.name = "InteractPrompt"
+	_root.add_child(_prompt)
+
+func _build_toasts() -> void:
+	_toasts = Control.new()
+	_toasts.name = "Toasts"
+	_toasts.layout_direction = Control.LAYOUT_DIRECTION_LTR
+	_toasts.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_toasts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(_toasts)
+
+func set_interact_prompt(text: String) -> void:
+	if _prompt == null:
+		return
+	if text.strip_edges() == "":
+		_prompt.hide_prompt()
+	else:
+		_prompt.show_prompt(text)
+	if btn_interact:
+		btn_interact.accent = Palette.BLOOD_HOT if text.strip_edges() != "" else Palette.MOON_DIM
+		btn_interact.queue_redraw()
+
+func toast(text: String, glyph: String = "", accent: Color = Palette.BLOOD) -> void:
+	if _toasts == null:
+		return
+	for c in _toasts.get_children():
+		if c is Toast:
+			(c as Toast).modulate.a = 0.0
+			c.queue_free()
+	Toast.show_on(_toasts, text, glyph, accent)
+
 # ---------- التحكم العلوي ----------
 func _build_pause() -> void:
 	var b := ActionButton.new()
@@ -232,6 +281,8 @@ func set_controls_visible(v: bool) -> void:
 		joystick.visible = v
 	if look_area:
 		look_area.visible = v
-	for b in [btn_run, btn_jump, btn_interact]:
+	for b in [btn_run, btn_jump, btn_interact, btn_inventory]:
 		if b:
 			b.visible = v
+	if _prompt and not v:
+		_prompt.hide_prompt()

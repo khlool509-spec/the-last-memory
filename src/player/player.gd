@@ -23,6 +23,11 @@ var stamina: float = 100.0
 
 var _gravity: float = 9.8
 var _was_on_floor: bool = true
+var _step_accum: float = 0.0
+## المسافة بين خطوتين بالأمتار — ثابتة بالمسافة لا بالزمن،
+## فلا تتسارع النقرات حين يتسارع اللاعب.
+const STEP_WALK := 1.9
+const STEP_RUN := 2.6
 
 func _ready() -> void:
 	_gravity = float(ProjectSettings.get_setting("physics/3d/default_gravity", 9.8))
@@ -70,7 +75,26 @@ func _physics_process(delta: float) -> void:
 		rotation.y = lerp_angle(rotation.y, want, clampf(turn_speed * delta, 0.0, 1.0))
 
 	move_and_slide()
+	_update_footsteps(delta)
+
+	# هبوط بعد قفزة: نقرة أقوى
+	if is_on_floor() and not _was_on_floor:
+		Audio.play_footstep(true)
 	_was_on_floor = is_on_floor()
+
+func _update_footsteps(_delta: float) -> void:
+	if not is_on_floor():
+		_step_accum = 0.0
+		return
+	var moved := Vector2(velocity.x, velocity.z).length() * _delta
+	if moved < 0.001:
+		_step_accum = maxf(0.0, _step_accum - 0.6 * _delta)
+		return
+	_step_accum += moved
+	var stride := STEP_RUN if is_running() else STEP_WALK
+	if _step_accum >= stride:
+		_step_accum = 0.0
+		Audio.play_footstep(is_running())
 
 func _update_stamina(delta: float) -> void:
 	var before := stamina

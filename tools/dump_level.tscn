@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://tools/dump_level.gd" id="1_omvc8"]
+
+[node name="DumpLevel" type="Node" unique_id=65066574]
+script = ExtResource("1_omvc8")

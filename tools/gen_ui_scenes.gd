@@ -8,6 +8,7 @@ const SCENES := [
 	{"out": "res://src/ui/screens/chapters_menu.tscn", "script": "res://src/ui/screens/chapters_menu.gd", "type": "Control", "name": "ChaptersMenu"},
 	{"out": "res://src/ui/screens/collectibles_menu.tscn", "script": "res://src/ui/screens/collectibles_menu.gd", "type": "Control", "name": "CollectiblesMenu"},
 	{"out": "res://levels/test/playground.tscn", "script": "res://src/environment/playground.gd", "type": "Node3D", "name": "Playground"},
+	{"out": "res://levels/ch01_forest/chapter_one.tscn", "script": "res://src/levels/chapter_one.gd", "type": "Node3D", "name": "ChapterOne"},
 ]
 
 func _initialize() -> void:

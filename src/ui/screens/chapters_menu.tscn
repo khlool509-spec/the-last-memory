@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://src/ui/screens/chapters_menu.gd" id="1_5ehnm"]
 
-[node name="ChaptersMenu" type="Control" unique_id=670974141]
+[node name="ChaptersMenu" type="Control" unique_id=768520994]
 layout_mode = 3
 anchors_preset = 0
 anchor_right = 1.0

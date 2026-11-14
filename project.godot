@@ -10,7 +10,7 @@ config_version=5
 
 config/name="THE LAST MEMORY"
 config/description="لعبة مغامرات وغموض ثلاثية الأبعاد بمنظور الشخص الثالث، للأندرويد، فردية وتعمل دون اتصال."
-config/version="0.3.1"
+config/version="0.4.0"
 run/main_scene="res://src/ui/screens/main_menu.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://assets/textures/icon/icon_512.png"
@@ -20,6 +20,9 @@ config/icon="res://assets/textures/icon/icon_512.png"
 Settings="*res://src/core/game_settings.gd"
 SaveSystem="*res://src/save_system/save_system.gd"
 Router="*res://src/core/scene_router.gd"
+Inv="*res://src/inventory/inventory.gd"
+Goals="*res://src/story/objectives.gd"
+Audio="*res://src/audio/audio_manager.gd"
 
 [display]
 
