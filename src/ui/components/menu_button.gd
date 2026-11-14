@@ -3,6 +3,7 @@ extends Button
 ## زر القائمة: تمييز دموي متحرك عند التحديد، وشريط جانبي، وتكبير خفيف.
 
 var _bar: ColorRect
+var _fill: ColorRect
 var _tw: Tween
 
 func _init(label: String = "") -> void:
@@ -15,12 +16,37 @@ func _ready() -> void:
 	layout_direction = Control.LAYOUT_DIRECTION_RTL
 	pivot_offset = custom_minimum_size * 0.5
 
+	# تعبئة حمراء متدرّجة تظهر عند التحديد، وشريط حاد على الحافة
+	_fill = ColorRect.new()
+	_fill.layout_direction = Control.LAYOUT_DIRECTION_LTR
+	_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fill.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var grad := Gradient.new()
+	grad.set_color(0, Palette.with_alpha(Palette.BLOOD, 0.0))
+	grad.set_color(1, Palette.with_alpha(Palette.BLOOD_HOT, 0.85))
+	var gtex := GradientTexture2D.new()
+	gtex.gradient = grad
+	gtex.fill_from = Vector2(0, 0)
+	gtex.fill_to = Vector2(1, 0)
+	var tr := TextureRect.new()
+	tr.texture = gtex
+	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	tr.stretch_mode = TextureRect.STRETCH_SCALE
+	tr.layout_direction = Control.LAYOUT_DIRECTION_LTR
+	tr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fill.add_child(tr)
+	_fill.color = Color(0, 0, 0, 0)
+	_fill.modulate.a = 0.0
+	add_child(_fill)
+	move_child(_fill, 0)
+
 	_bar = ColorRect.new()
-	_bar.color = Palette.BLOOD_HOT
+	_bar.color = Palette.EMBER
+	_bar.layout_direction = Control.LAYOUT_DIRECTION_LTR
 	_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_bar.set_anchors_and_offsets_preset(Control.PRESET_RIGHT_WIDE)
-	_bar.custom_minimum_size = Vector2(5, 0)
-	_bar.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_bar.offset_left = -6
 	_bar.modulate.a = 0.0
 	add_child(_bar)
 
@@ -42,6 +68,7 @@ func _animate(bar_alpha: float, target_scale: Vector2) -> void:
 	_tw = create_tween().set_parallel(true)
 	_tw.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	_tw.tween_property(_bar, "modulate:a", bar_alpha, 0.16)
+	_tw.tween_property(_fill, "modulate:a", bar_alpha, 0.18)
 	_tw.tween_property(self, "scale", target_scale, 0.16)
 
 func _on_pressed() -> void:

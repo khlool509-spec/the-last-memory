@@ -60,10 +60,10 @@ func _build_title() -> Control:
 	box.add_child(_title_line("الذاكرة", Palette.BONE))
 	box.add_child(_title_line("الأخيرة", Palette.BLOOD_HOT))
 
-	var rule := ColorRect.new()
-	rule.color = Palette.with_alpha(Palette.BLOOD, 0.85)
-	rule.custom_minimum_size = Vector2(0, 2)
-	box.add_child(rule)
+	var drip := BloodDrip.new()
+	drip.drip_count = 9
+	drip.max_length = 52.0
+	box.add_child(drip)
 
 	var sub := Label.new()
 	sub.name = "Subtitle"
