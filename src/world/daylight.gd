@@ -39,22 +39,26 @@ const PRESETS := {
 		"sky_horizon": Color(0.686, 0.769, 0.835),
 		"ground_horizon": Color(0.333, 0.333, 0.306),
 		"ground_bottom": Color(0.188, 0.196, 0.180),
-		"sun_dir": Vector3(0.42, 0.80, 0.43),
-		"sun_color": Color(1.0, 0.953, 0.871),
+		"sun_dir": Vector3(0.377, 0.742, 0.555),
+		"sun_color": Color(0.991, 1.0, 0.909),
 		"sun_energy": 1.48,
 		"ambient_color": Color(0.396, 0.467, 0.569),
-		"ambient_energy": 1.55,
+		"ambient_energy": 0.90,
 		"fog_color": Color(0.596, 0.655, 0.714),
 		"fog_near": 0.00030,      # كثافة الضباب على المرتفعات
 		"fog_far": 0.00090,       # في بطن الوادي
 		"fog_begin": 110.0,
 		"fog_end": 460.0,
 		"sky_affect": 0.08,
-		"exposure": 0.94,
-		"saturation": 1.04,
+		"exposure": 0.80,
+		"saturation": 1.02,
 		"lamp_scale": 0.10,       # الفوانيس تخفت في وضح النهار
 		"shadow_dist": 150.0,
 		"foliage_tint": Color(1.0, 1.0, 1.0),
+		# سماء مصوّرة (pure sky): ركام حقيقي وشمس HDR. سماوات الغابة
+		# المرشّحة لا تصلح خلفيةً — تملأ الأفق بجدار أشجار؛ تبقى
+		# محفوظة للإضاءة وحدها إن لزم.
+		"hdri": "kloofendal_48d_partly_cloudy_puresky_2k.hdr", "hdri_energy": 1.0,
 		"sun_disc": 9.0, "sun_size": 0.0015, "sun_glow": 2.0, "horizon_sharp": 2.6, "clouds": 0.54,
 		"cloud_color": Color(1.0, 0.988, 0.969), "cloud_shadow": Color(0.541, 0.580, 0.639),
 		"volumetric": 0.0016,
@@ -129,6 +133,37 @@ static func exposure_multiplier(brightness01: float) -> float:
 ## يطبّق الوقت والسطوع على البيئة والشمس دفعة واحدة
 static func apply(env: Environment, sun: DirectionalLight3D, key: String, brightness01: float) -> void:
 	var p := preset(key)
+
+	# سماء HDRI مصوّرة حين يحدّدها الوقت: تعطي خلفية حقيقية وإضاءة
+	# محيطة فيزيائية وانعكاسات من المصدر نفسه. وهي أقرب ما يُبلَغ من
+	# إضاءة عامّة صحيحة بلا خبز، ولهذا تُفضَّل على السماء الإجرائية
+	# في الأوقات التي لها HDRI. الليل يبقى إجرائياً.
+	var hdri_name := str(p.get("hdri", ""))
+	if env.sky and hdri_name != "":
+		var path := "res://assets/hdri/" + hdri_name
+		var need_swap := not (env.sky.sky_material is PanoramaSkyMaterial)
+		var pano: PanoramaSkyMaterial
+		if need_swap:
+			pano = PanoramaSkyMaterial.new()
+			pano.filter = true
+			env.sky.sky_material = pano
+		else:
+			pano = env.sky.sky_material as PanoramaSkyMaterial
+		if ResourceLoader.exists(path):
+			var tex: Texture2D = ResourceLoader.load(path)
+			if pano.panorama != tex:
+				pano.panorama = tex
+		pano.energy_multiplier = float(p.get("hdri_energy", 1.0))
+	elif env.sky and hdri_name == "" and env.sky.sky_material is PanoramaSkyMaterial:
+		# العودة من HDRI إلى السماء الإجرائية (الليل).
+		# الشرط على PanoramaSkyMaterial وحده: بغيره كان وقتٌ إجرائيّ
+		# يحمل ProceduralSkyMaterial يُستبدَل بشادر، فتنكسر كل شيفرة
+		# تقرأ خصائص المادة الإجرائية.
+		var shader: Shader = ResourceLoader.load("res://assets/shaders/sky.gdshader")
+		var back := ShaderMaterial.new()
+		back.shader = shader
+		env.sky.sky_material = back
+
 	if env.sky and env.sky.sky_material is ShaderMaterial:
 		var sm := env.sky.sky_material as ShaderMaterial
 		sm.set_shader_parameter("top_color", p["sky_top"])

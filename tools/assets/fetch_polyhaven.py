@@ -25,6 +25,9 @@ WANT = {                      # المعرّف: (الخرائط، الدقة)
     "roof_07":             (["Diffuse", "nor_gl", "arm"], "2k"),
     "beam_wall_01":        (["Diffuse", "nor_gl", "arm"], "2k"),
     "coral_stone_wall":    (["Diffuse", "nor_gl", "arm"], "2k"),
+    "forest_floor":        (["Diffuse", "nor_gl", "arm"], "2k"),
+    "mud_forest":          (["Diffuse", "nor_gl", "arm"], "2k"),
+    "rocky_terrain":       (["Diffuse", "nor_gl", "arm"], "2k"),
 }
 SUFFIX = {"Diffuse": "diff", "nor_gl": "nor", "arm": "arm"}
 

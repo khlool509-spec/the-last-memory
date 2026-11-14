@@ -574,5 +574,128 @@
       }
     },
     "in_use": true
+  },
+  "forest_floor": {
+    "source": "https://polyhaven.com/a/forest_floor",
+    "api": "https://api.polyhaven.com/files/forest_floor",
+    "license": "CC0 1.0",
+    "license_url": "https://polyhaven.com/license",
+    "authors": {
+      "eye-candy.xyz": "All"
+    },
+    "real_size_mm": [
+      2139.9996280670166,
+      2139.9996280670166
+    ],
+    "max_resolution": [
+      8192,
+      8192
+    ],
+    "files": {
+      "diff": {
+        "file": "forest_floor_diff_2k.jpg",
+        "path": "assets/textures/pbr/forest_floor_diff_2k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/forest_floor/forest_floor_diff_2k.jpg",
+        "md5": "a93f845fca105e6cabc82853161ff7b6",
+        "bytes": 5452936
+      },
+      "nor": {
+        "file": "forest_floor_nor_2k.jpg",
+        "path": "assets/textures/pbr/forest_floor_nor_2k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/forest_floor/forest_floor_nor_gl_2k.jpg",
+        "md5": "41e49ec58f74a749e325f59290266e9d",
+        "bytes": 5367757
+      },
+      "arm": {
+        "file": "forest_floor_arm_2k.jpg",
+        "path": "assets/textures/pbr/forest_floor_arm_2k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/forest_floor/forest_floor_arm_2k.jpg",
+        "md5": "00a1d0081bfa9a574d5973106c94c01e",
+        "bytes": 3926636
+      }
+    },
+    "in_use": true
+  },
+  "mud_forest": {
+    "source": "https://polyhaven.com/a/mud_forest",
+    "api": "https://api.polyhaven.com/files/mud_forest",
+    "license": "CC0 1.0",
+    "license_url": "https://polyhaven.com/license",
+    "authors": {
+      "eye-candy.xyz": "All"
+    },
+    "real_size_mm": [
+      2349.9999046325684,
+      2349.9999046325684
+    ],
+    "max_resolution": [
+      8192,
+      8192
+    ],
+    "files": {
+      "diff": {
+        "file": "mud_forest_diff_2k.jpg",
+        "path": "assets/textures/pbr/mud_forest_diff_2k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/mud_forest/mud_forest_diff_2k.jpg",
+        "md5": "e78c6eae192daae3d00a677a588d1739",
+        "bytes": 3683329
+      },
+      "nor": {
+        "file": "mud_forest_nor_2k.jpg",
+        "path": "assets/textures/pbr/mud_forest_nor_2k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/mud_forest/mud_forest_nor_gl_2k.jpg",
+        "md5": "17635ab324ff50542465d7a4284502e3",
+        "bytes": 5909919
+      },
+      "arm": {
+        "file": "mud_forest_arm_2k.jpg",
+        "path": "assets/textures/pbr/mud_forest_arm_2k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/mud_forest/mud_forest_arm_2k.jpg",
+        "md5": "5e46adb654cda4ca023f1e983a363a71",
+        "bytes": 3326167
+      }
+    },
+    "in_use": true
+  },
+  "rocky_terrain": {
+    "source": "https://polyhaven.com/a/rocky_terrain",
+    "api": "https://api.polyhaven.com/files/rocky_terrain",
+    "license": "CC0 1.0",
+    "license_url": "https://polyhaven.com/license",
+    "authors": {
+      "Amal Kumar": "All"
+    },
+    "real_size_mm": [
+      90000,
+      90000
+    ],
+    "max_resolution": [
+      8192,
+      8192
+    ],
+    "files": {
+      "diff": {
+        "file": "rocky_terrain_diff_2k.jpg",
+        "path": "assets/textures/pbr/rocky_terrain_diff_2k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_terrain/rocky_terrain_diff_2k.jpg",
+        "md5": "4abb5d65394b6af07752099bd34ddd02",
+        "bytes": 3287952
+      },
+      "nor": {
+        "file": "rocky_terrain_nor_2k.jpg",
+        "path": "assets/textures/pbr/rocky_terrain_nor_2k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_terrain/rocky_terrain_nor_gl_2k.jpg",
+        "md5": "05034535c6a4d24bf1886bd6331b9d39",
+        "bytes": 4149933
+      },
+      "arm": {
+        "file": "rocky_terrain_arm_2k.jpg",
+        "path": "assets/textures/pbr/rocky_terrain_arm_2k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_terrain/rocky_terrain_arm_2k.jpg",
+        "md5": "eaf3128113f818b0bd76237322eeeca4",
+        "bytes": 2272707
+      }
+    },
+    "in_use": true
   }
 }

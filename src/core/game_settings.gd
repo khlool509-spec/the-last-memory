@@ -18,6 +18,7 @@ const DEFAULTS := {
 	"time_of_day": "day",
 	"brightness": 0.5,
 	"show_vegetation": false,
+	"show_rocks": true,
 	"invert_y": false,
 	"show_fps": false,
 	"vibration": true,

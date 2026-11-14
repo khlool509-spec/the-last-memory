@@ -71,14 +71,23 @@ func _test_structure() -> void:
 			hm.map_width == world.data.height_res and hm.map_depth == world.data.height_res)
 		_true("تكبير الخلايا يطابق خطوة العيّنات",
 			is_equal_approx(cs.scale.x, world.data.height_step))
-	var sc := world.scatter_root.get_child_count() if world.scatter_root else 0
-	# النبات مُطفأ مؤقتاً بطلب: الاختبار يتحقّق من اتّساق الإعداد
-	# مع النتيجة، لا من وجود النبات دائماً.
+	var _rk := 0
+	var _pl := 0
+	if world.scatter_root:
+		for _c in world.scatter_root.get_children():
+			if str(_c.name).begins_with("rock"):
+				_rk += 1
+			else:
+				_pl += 1
+	# الصخور تفاصيل أرض لا نباتاً، فتبقى ظاهرة حين يُطفأ النبات.
 	if bool(Settings.get_value("show_vegetation")):
-		_true("مجموعات النبات (%d)" % sc, sc > 600)
+		_true("مجموعات النبات (%d)" % _pl, _pl > 600)
 	else:
-		_true("النبات مُطفأ فلا مجموعات (%d)" % sc, sc == 0,
-			"show_vegetation=false لكن وُجدت %d مجموعة" % sc)
+		_true("النبات مُطفأ فلا مجموعات نبات (%d)" % _pl, _pl == 0,
+			"show_vegetation=false لكن وُجدت %d مجموعة نبات" % _pl)
+	if bool(Settings.get_value("show_rocks")):
+		_true("الصخور ظاهرة رغم إطفاء النبات (%d)" % _rk, _rk > 0,
+			"show_rocks=true لكن لا مجموعة صخر")
 	_true("سطح النهر موجود", world.water_root != null and world.water_root.get_child_count() > 0)
 
 	# عطب حقيقي وقع: كان لفّ مثلثات الأرض معكوساً فتُقصّ كلها ولا
@@ -166,7 +175,8 @@ func _test_data_integrity() -> void:
 		if nm.ends_with("_L1"): lod = 1
 		elif nm.ends_with("_L2"): lod = 2
 		lod_sets[lod] = int(lod_sets[lod]) + mmi.multimesh.instance_count
-		if lod == 0:
+		# الصخور تُعدّ وحدها: هي تفاصيل أرض لا نبات
+		if lod == 0 and not nm.begins_with("rock"):
 			drawn += mmi.multimesh.instance_count
 	# النبات مُطفأ مؤقتاً بطلب؛ بيانات التوزيع تبقى مخبوزة كما هي.
 	# الاختبار يتحقّق من اتّساق الإعداد مع ما رُكّب فعلاً.
@@ -175,8 +185,8 @@ func _test_data_integrity() -> void:
 		_true("مستويات التفصيل مبنية (L1=%d، L2=%d)" % [lod_sets[1], lod_sets[2]],
 			int(lod_sets[1]) > 5000 and int(lod_sets[1]) == int(lod_sets[2]))
 	else:
-		_true("النبات مُطفأ فلا نسخ مُركَّبة (%d)" % drawn, drawn == 0,
-			"show_vegetation=false لكن رُكّبت %d نسخة" % drawn)
+		_true("لا نسخ نبات مُركَّبة (%d)" % drawn, drawn == 0,
+			"show_vegetation=false لكن رُكّبت %d نسخة نبات" % drawn)
 		_true("بيانات التوزيع محفوظة رغم الإطفاء (%d)" % inst, inst > 15000,
 			"فُقدت بيانات النبات المخبوزة")
 

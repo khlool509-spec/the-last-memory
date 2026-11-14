@@ -391,11 +391,13 @@ static func grass_tuft(rng: RandomNumberGenerator) -> ArrayMesh:
 # ---------- صخور وحطام ----------
 static func rock(rng: RandomNumberGenerator, angular: bool) -> ArrayMesh:
 	var st := _begin()
-	var rings := 2 if angular else 3
-	var segs := 5 if angular else 7
+	# كانت 2-3 حلقات و5-7 قطاعات: كتلة بأوجه قليلة تُقرأ مكعّباً.
+	# الصخرة تحتاج صمتاً كافياً في الظلّية لتُقرأ حجراً.
+	var rings := 4 if angular else 5
+	var segs := 9 if angular else 11
 	_blob(st, Vector3(0, 0.0, 0), rng.randf_range(0.42, 0.58), rng.randf_range(0.28, 0.46),
 		rng.randf_range(0.42, 0.58), rings, segs, ROCK_GREY.darkened(rng.randf_range(0.0, 0.18)),
-		rng, 0.30 if angular else 0.18)
+		rng, 0.38 if angular else 0.24)
 	return _finish(st)
 
 static func log_mesh(rng: RandomNumberGenerator) -> ArrayMesh:

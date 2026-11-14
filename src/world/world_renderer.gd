@@ -110,8 +110,10 @@ func _build_scatter() -> void:
 
 	# إطفاء مؤقت للنبات: البيانات والمجسّمات والخامات كلها باقية،
 	# يُستأنف الرسم بتبديل الإعداد بلا إعادة خبز ولا فقد شيء.
-	if not bool(Settings.get_value("show_vegetation")):
-		vegetation_hidden = true
+	var show_plants := bool(Settings.get_value("show_vegetation"))
+	var show_rocks := bool(Settings.get_value("show_rocks"))
+	vegetation_hidden = not show_plants
+	if not show_plants and not show_rocks:
 		return
 
 	var rng := RandomNumberGenerator.new()
@@ -128,6 +130,11 @@ func _build_scatter() -> void:
 		var arr: PackedFloat32Array = data.scatter[key]
 		var count := int(arr.size() / 12.0)
 		if count == 0:
+			continue
+		var is_rock := species.begins_with("rock")
+		if is_rock and not show_rocks:
+			continue
+		if not is_rock and not show_plants:
 			continue
 		var far: float = float(RANGE.get(species, 60.0)) * quality_scale
 		var colored := _colored_buffer(arr, count, species)
@@ -221,7 +228,9 @@ func _mesh_for(species: String, rng: RandomNumberGenerator, detail: float, lod: 
 func _mat_for(species: String) -> Material:
 	if _mat_cache.has(species):
 		return _mat_cache[species]
-	var m := WorldMaterials.foliage(species)
+	# الصخور خامة حجر مصوّرة بإسقاط ثلاثي، لا لون قمم كالنبات
+	var m: Material = WorldMaterials.rock_scatter() if species.begins_with("rock") \
+		else WorldMaterials.foliage(species)
 	_mat_cache[species] = m
 	return m
 

@@ -1,0 +1,95 @@
+{
+  "nature_reserve_forest": {
+    "source": "https://polyhaven.com/a/nature_reserve_forest",
+    "license": "CC0 1.0",
+    "license_url": "https://polyhaven.com/license",
+    "authors": {
+      "Dimitrios Savva": "Photography",
+      "Jarod Guest": "Processing"
+    },
+    "max_resolution": [
+      24576,
+      12288
+    ],
+    "whitebalance": 5319,
+    "file": "nature_reserve_forest_2k.hdr",
+    "path": "assets/hdri/nature_reserve_forest_2k.hdr",
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/nature_reserve_forest_2k.hdr",
+    "md5": "e6fa4231d1674e763c791e42f52cd924",
+    "bytes": 7457457
+  },
+  "sunset_forest": {
+    "source": "https://polyhaven.com/a/sunset_forest",
+    "license": "CC0 1.0",
+    "license_url": "https://polyhaven.com/license",
+    "authors": {
+      "Andreas Mischok": "All"
+    },
+    "max_resolution": [
+      17710,
+      8855
+    ],
+    "whitebalance": null,
+    "file": "sunset_forest_2k.hdr",
+    "path": "assets/hdri/sunset_forest_2k.hdr",
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/sunset_forest_2k.hdr",
+    "md5": "e64eb5db0b0ed8b6cb63ac1025f31af6",
+    "bytes": 7301510
+  },
+  "kloofendal_48d_partly_cloudy_puresky": {
+    "source": "https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky",
+    "license": "CC0 1.0",
+    "license_url": "https://polyhaven.com/license",
+    "authors": {
+      "Greg Zaal": "Original",
+      "Jarod Guest": "Sky edits"
+    },
+    "max_resolution": [
+      16384,
+      8192
+    ],
+    "whitebalance": 5400,
+    "file": "kloofendal_48d_partly_cloudy_puresky_2k.hdr",
+    "path": "assets/hdri/kloofendal_48d_partly_cloudy_puresky_2k.hdr",
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/kloofendal_48d_partly_cloudy_puresky_2k.hdr",
+    "md5": "2eba3a4d7eeb23cbfbeca364c97e7980",
+    "bytes": 5451493
+  },
+  "kloofendal_overcast_puresky": {
+    "source": "https://polyhaven.com/a/kloofendal_overcast_puresky",
+    "license": "CC0 1.0",
+    "license_url": "https://polyhaven.com/license",
+    "authors": {
+      "Greg Zaal": "All"
+    },
+    "max_resolution": [
+      24576,
+      12288
+    ],
+    "whitebalance": 5303,
+    "file": "kloofendal_overcast_puresky_2k.hdr",
+    "path": "assets/hdri/kloofendal_overcast_puresky_2k.hdr",
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/kloofendal_overcast_puresky_2k.hdr",
+    "md5": "26462123fc5ce757a331553d05e4db37",
+    "bytes": 4335717
+  },
+  "overcast_soil_puresky": {
+    "source": "https://polyhaven.com/a/overcast_soil_puresky",
+    "license": "CC0 1.0",
+    "license_url": "https://polyhaven.com/license",
+    "authors": {
+      "Jarod Guest": "Sky Edits",
+      "Sergej Majboroda": "Original"
+    },
+    "max_resolution": [
+      16384,
+      8192
+    ],
+    "whitebalance": 6900,
+    "file": "overcast_soil_puresky_2k.hdr",
+    "path": "assets/hdri/overcast_soil_puresky_2k.hdr",
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/overcast_soil_puresky_2k.hdr",
+    "md5": "877caf0680d7269037995f6567a67103",
+    "bytes": 4568000
+  }
+}

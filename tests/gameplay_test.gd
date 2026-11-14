@@ -263,8 +263,20 @@ func _test_daylight() -> void:
 	Daylight.apply(env, sun, "day", 0.5)
 	_true("التطبيق يرفع طاقة الشمس (%.2f ← %.2f)" % [night_sun, sun.light_energy],
 		sun.light_energy > night_sun)
-	_true("ويفتح لون السماء",
-		(env.sky.sky_material as ProceduralSkyMaterial).sky_top_color.v > night_top.v * 1.5)
+	# النهار صار يستعمل سماء HDRI مصوّرة، والليل يبقى إجرائياً.
+	# فالاختبار يتحقّق من تبديل نوع السماء لا من لون مادة إجرائية
+	# لم تعد موجودة في النهار.
+	_true("النهار يبدّل السماء إلى HDRI مصوّرة",
+		env.sky.sky_material is PanoramaSkyMaterial,
+		"النوع: " + env.sky.sky_material.get_class())
+	_true("وصورة السماء محمّلة",
+		(env.sky.sky_material as PanoramaSkyMaterial).panorama != null)
+	Daylight.apply(env, sun, "night", 0.5)
+	_true("والليل يعود إلى السماء الإجرائية",
+		env.sky.sky_material is ShaderMaterial or env.sky.sky_material is ProceduralSkyMaterial,
+		"النوع: " + env.sky.sky_material.get_class())
+	Daylight.apply(env, sun, "day", 0.5)
+	_true("لون سماء الليل كان أغمق (مرجع %.2f)" % night_top.v, night_top.v < 0.35)
 	_true("ويبعّد نهاية الضباب", env.fog_depth_end > 250.0)
 	Daylight.apply(env, sun, "day", 1.0)
 	_true("رفع السطوع يرفع التعريض", env.tonemap_exposure > night_exp)
@@ -401,14 +413,22 @@ func _test_chapter_one() -> void:
 	if one and one.world:
 		_true("مقاطع الأرض محمّلة", one.world.terrain_root.get_child_count() == 100)
 		_true("تصادم التضاريس موجود", one.world.body != null)
-		var sc := one.world.scatter_root.get_child_count()
-		# النبات مُطفأ مؤقتاً بطلب: الاختبار يتحقّق من اتّساق الإعداد
-		# مع النتيجة، لا من وجود النبات دائماً.
+		# الصخور تفاصيل أرض لا نباتاً، فتبقى ظاهرة حين يُطفأ النبات.
+		var _rk := 0
+		var _pl := 0
+		for _c in one.world.scatter_root.get_children():
+			if str(_c.name).begins_with("rock"):
+				_rk += 1
+			else:
+				_pl += 1
 		if bool(Settings.get_value("show_vegetation")):
-			_true("مجموعات النبات (%d)" % sc, sc > 600)
+			_true("مجموعات النبات (%d)" % _pl, _pl > 600)
 		else:
-			_true("النبات مُطفأ فلا مجموعات (%d)" % sc, sc == 0,
-				"show_vegetation=false لكن وُجدت %d مجموعة" % sc)
+			_true("النبات مُطفأ فلا مجموعات نبات (%d)" % _pl, _pl == 0,
+				"show_vegetation=false لكن وُجدت %d مجموعة نبات" % _pl)
+		if bool(Settings.get_value("show_rocks")):
+			_true("الصخور ظاهرة رغم إطفاء النبات (%d)" % _rk, _rk > 0,
+				"show_rocks=true لكن لا مجموعة صخر")
 	var gate := _find_named(lvl, "AncientGate")
 	_true("البوابة الأثرية موجودة", gate != null)
 	_true("المباني مبنية (%d)" % (one.buildings.size() if one else 0),

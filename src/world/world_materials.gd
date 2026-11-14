@@ -43,16 +43,21 @@ static func ground() -> ShaderMaterial:
 	var sh: Shader = ResourceLoader.load("res://assets/shaders/ground.gdshader")
 	var m := ShaderMaterial.new()
 	m.shader = sh
-	# تفصيل أ: تربة وحصى (forest_ground_04، بلاطة 3.15 م)
-	m.set_shader_parameter("a_diff", _pbr("forest_ground_04_diff_2k.jpg"))
-	m.set_shader_parameter("a_norm", _pbr("forest_ground_04_nor_2k.jpg"))
-	m.set_shader_parameter("a_arm", _pbr("forest_ground_04_arm_2k.jpg"))
-	# تفصيل ب: أرض غابة بعشب (forrest_ground_01، بلاطة 2.00 م)
+	# أ: طين غابة رطب (mud_forest، بلاطة 2.35 م)
+	m.set_shader_parameter("a_diff", _pbr("mud_forest_diff_2k.jpg"))
+	m.set_shader_parameter("a_norm", _pbr("mud_forest_nor_2k.jpg"))
+	m.set_shader_parameter("a_arm", _pbr("mud_forest_arm_2k.jpg"))
+	# ب: أرض غابة بعشب (forrest_ground_01، بلاطة 2.00 م)
 	m.set_shader_parameter("b_diff", _pbr("forrest_ground_01_diff_2k.jpg"))
 	m.set_shader_parameter("b_norm", _pbr("forrest_ground_01_nor_2k.jpg"))
 	m.set_shader_parameter("b_arm", _pbr("forrest_ground_01_arm_2k.jpg"))
-	# نطاق واسع: تضاريس جوية (rocky_terrain_02، بلاطة 90 م)
-	m.set_shader_parameter("macro_diff", _pbr("rocky_terrain_02_diff_2k.jpg"))
+	# ج: فرش أوراق ساقطة (forest_floor، بلاطة 2.14 م)
+	m.set_shader_parameter("c_diff", _pbr("forest_floor_diff_2k.jpg"))
+	m.set_shader_parameter("c_norm", _pbr("forest_floor_nor_2k.jpg"))
+	m.set_shader_parameter("c_arm", _pbr("forest_floor_arm_2k.jpg"))
+	# نطاق واسع: تضاريس جوية (rocky_terrain، بلاطة 90 م)
+	m.set_shader_parameter("macro_diff", _pbr("rocky_terrain_diff_2k.jpg"))
+	m.set_shader_parameter("water_level", WorldProfile.WATER_LEVEL)
 	# الصخر على المنحدرات (aerial_rocks_02)
 	m.set_shader_parameter("rock_diff", _pbr("aerial_rocks_02_diff_2k.jpg"))
 	m.set_shader_parameter("rock_norm", _pbr("aerial_rocks_02_nor_2k.jpg"))
@@ -174,6 +179,19 @@ static func planks(tint: Color = Color.WHITE) -> ORMMaterial3D:
 
 static func roof(tint: Color = Color.WHITE) -> ORMMaterial3D:
 	return _orm("roof_07", 2.2, _lift(tint))
+
+## صخور الأرض: شادر ثلاثي المحاور على خامة صخر مصوّرة
+static var _rock_mat: ShaderMaterial = null
+static func rock_scatter() -> ShaderMaterial:
+	if _rock_mat != null:
+		return _rock_mat
+	var m := ShaderMaterial.new()
+	m.shader = ResourceLoader.load("res://assets/shaders/rock.gdshader")
+	m.set_shader_parameter("rock_diff", _pbr("aerial_rocks_02_diff_2k.jpg"))
+	m.set_shader_parameter("rock_norm", _pbr("aerial_rocks_02_nor_2k.jpg"))
+	m.set_shader_parameter("rock_arm", _pbr("aerial_rocks_02_arm_2k.jpg"))
+	_rock_mat = m
+	return m
 
 ## جدران جذوع: المبنى المهجور في وادٍ حرجي يُبنى من جذوع لا من
 ## خامة صخر أفقية. beam_wall_01 بلاطتها متر واحد فتُكرَّر 3.2 مرة

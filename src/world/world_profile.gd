@@ -13,9 +13,12 @@ const HALF := 200.0          # العالم 400×400 متر
 const WATER_LEVEL := -2.6    # سطح الماء بالنسبة للصفر
 
 # التضاريس
-const BASE_AMP := 13.0       # سعة التلال الكبرى
-const RIDGE_AMP := 9.0       # سعة الحواف الصخرية
+const BASE_AMP := 17.0       # سعة التلال الكبرى
+const RIDGE_AMP := 13.0      # سعة الحواف الصخرية
 const DETAIL_AMP := 1.15     # خشونة قريبة
+const OUTCROP_AMP := 7.0     # نتوءات صخرية حادّة تكسر استدارة التلال
+const GULLY_AMP := 2.6       # قنوات حتّ ينحتها الماء في المنحدرات
+const TERRACE := 2.9         # ارتفاع المصطبة الصخرية بالمتر
 
 # النهر
 const RIVER_HALF_WIDTH := 5.0
@@ -39,6 +42,8 @@ var _base: FastNoiseLite
 var _ridge: FastNoiseLite
 var _detail: FastNoiseLite
 var _warp: FastNoiseLite
+var _outcrop: FastNoiseLite
+var _gully: FastNoiseLite
 var _biome_noise: FastNoiseLite
 
 ## مسار النهر: نقاط مركزية يُستوفى بينها
@@ -54,6 +59,12 @@ func _init() -> void:
 	_ridge.fractal_type = FastNoiseLite.FRACTAL_RIDGED
 	_detail = _make_noise(SEED + 202, FastNoiseLite.TYPE_SIMPLEX, 0.052, 3, 0.52)
 	_warp = _make_noise(SEED + 303, FastNoiseLite.TYPE_SIMPLEX, 0.0031, 2, 0.5)
+	# نتوءات: حوافّ حادّة بتردّد أعلى من الحواف الكبرى
+	_outcrop = _make_noise(SEED + 505, FastNoiseLite.TYPE_SIMPLEX, 0.0186, 3, 0.46)
+	_outcrop.fractal_type = FastNoiseLite.FRACTAL_RIDGED
+	# قنوات الحتّ: حوافّ مقلوبة تُحفر في السفوح
+	_gully = _make_noise(SEED + 606, FastNoiseLite.TYPE_SIMPLEX, 0.0122, 2, 0.5)
+	_gully.fractal_type = FastNoiseLite.FRACTAL_RIDGED
 	_biome_noise = _make_noise(SEED + 404, FastNoiseLite.TYPE_SIMPLEX_SMOOTH, 0.0098, 2, 0.5)
 	_build_river()
 	_build_roads()
@@ -241,6 +252,27 @@ func _raw_height(x: float, z: float) -> float:
 	var rx := wx * 0.8660254 - wz * 0.5
 	var rz := wx * 0.5 + wz * 0.8660254
 	var h := base + ridge + _detail.get_noise_2d(rx, rz) * DETAIL_AMP
+
+	# نتوءات صخرية: حوافّ حادّة تنبت من المرتفعات. بدونها تبقى
+	# التضاريس تلالاً مستديرة بلا هوية جيولوجية — وهو أظهر فارق
+	# عن المرجع السينمائي بعد الإضاءة.
+	var rock_mask := clampf(base / BASE_AMP * 1.7 - 0.42, 0.0, 1.0)
+	var oc := absf(_outcrop.get_noise_2d(wx * 1.0, wz * 1.0))
+	oc = pow(oc, 2.1)                       # الأسّ يُضيّق القمم فتصير حوافّ لا نتوءات ناعمة
+	var outcrop := oc * OUTCROP_AMP * rock_mask
+	h += outcrop
+
+	# تصطّب: الصخر المكشوف يتكسّر طبقات أفقية، لا منحدراً أملس.
+	# يُطبَّق بقدر كشف الصخر فقط فلا تتدرّج المروج.
+	if rock_mask > 0.02:
+		var t_amt := clampf(rock_mask * (0.35 + oc * 0.65), 0.0, 1.0) * 0.55
+		var terraced := roundf(h / TERRACE) * TERRACE
+		h = lerpf(h, terraced, t_amt)
+
+	# قنوات الحتّ: الماء ينحت أخاديد في السفوح، والمنبسط لا يُحفر
+	var gl := 1.0 - absf(_gully.get_noise_2d(wx, wz))
+	h -= pow(clampf(gl, 0.0, 1.0), 3.0) * GULLY_AMP * clampf(rock_mask * 1.4, 0.0, 1.0)
+
 	h += _features_at(x, z)
 	return h
 
