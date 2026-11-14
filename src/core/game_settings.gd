@@ -15,7 +15,7 @@ const DEFAULTS := {
 	"language": "ar",
 	"control_mode": "touch",
 	"graphics_quality": "high",
-	"time_of_day": "day",
+	"time_of_day": "golden",
 	"brightness": 0.5,
 	"invert_y": false,
 	"show_fps": false,

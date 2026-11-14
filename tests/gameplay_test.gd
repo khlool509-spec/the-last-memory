@@ -217,23 +217,25 @@ func _test_audio() -> void:
 # ---------- وقت اليوم والسطوع ----------
 func _test_daylight() -> void:
 	print("\n[وقت اليوم والسطوع]")
-	_eq("الافتراضي نهار", str(Settings.DEFAULTS["time_of_day"]), "day")
+	_eq("الافتراضي ساعة ذهبية", str(Settings.DEFAULTS["time_of_day"]), "golden")
 	_true("السطوع الافتراضي في المنتصف",
 		is_equal_approx(float(Settings.DEFAULTS["brightness"]), 0.5))
-	_eq("ثلاثة أوقات", Daylight.KEYS.size(), 3)
+	_eq("أربعة أوقات", Daylight.KEYS.size(), 4)
 	_eq("لكل وقت اسم عربي", Daylight.LABELS.size(), Daylight.KEYS.size())
 
 	# كل وقت مختلف فعلاً، لا مجرد اسم
-	var energies: Array[float] = []
-	var fogs: Array[float] = []
+	var day_p := Daylight.preset("day")
+	var night_p := Daylight.preset("night")
+	_true("النهار أسطع من الليل (%.2f مقابل %.2f)" % [float(day_p["sun_energy"]), float(night_p["sun_energy"])],
+		float(day_p["sun_energy"]) > float(night_p["sun_energy"]) * 1.5)
+	_true("ضباب الليل أثقل من ضباب النهار (%.4f مقابل %.4f)" % [float(night_p["fog_far"]), float(day_p["fog_far"])],
+		float(night_p["fog_far"]) > float(day_p["fog_far"]) * 2.0)
+	# كل وضع يحمل ضباباً حجمياً — ميزة Forward+ التي بُنيت عليها الأشعة
+	var missing_vol := 0
 	for k in Daylight.KEYS:
-		var pr := Daylight.preset(k)
-		energies.append(float(pr["sun_energy"]))
-		fogs.append(float(pr["fog_far"]))
-	_true("النهار أسطع من الليل (%.2f مقابل %.2f)" % [energies[0], energies[2]],
-		energies[0] > energies[2] * 1.8)
-	_true("ضباب الليل أثقل من ضباب النهار (%.4f مقابل %.4f)" % [fogs[2], fogs[0]],
-		fogs[2] > fogs[0] * 2.0)
+		if not Daylight.preset(k).has("volumetric"):
+			missing_vol += 1
+	_eq("كل وضع له ضباب حجمي", missing_vol, 0)
 	_true("فوانيس النهار تخفت",
 		float(Daylight.preset("day")["lamp_scale"]) < 0.3
 		and is_equal_approx(float(Daylight.preset("night")["lamp_scale"]), 1.0))

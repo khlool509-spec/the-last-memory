@@ -82,12 +82,47 @@ func _test_data_integrity() -> void:
 	for key in d.scatter:
 		inst += int((d.scatter[key] as PackedFloat32Array).size() / 12.0)
 	_true("نسخ موزّعة (%d)" % inst, inst > 15000)
+	# الأشجار تُركَّب ثلاث مرات (مستوى تفصيل لكل نطاق مسافة)، فيُعدّ
+	# المستوى الأول وحده ليقابل عدد النسخ المخبوزة.
 	var drawn := 0
+	var lod_sets := {0: 0, 1: 0, 2: 0}
 	for c in world.scatter_root.get_children():
 		var mmi := c as MultiMeshInstance3D
-		if mmi and mmi.multimesh:
+		if mmi == null or mmi.multimesh == null:
+			continue
+		var nm := String(mmi.name)
+		var lod := 0
+		if nm.ends_with("_L1"): lod = 1
+		elif nm.ends_with("_L2"): lod = 2
+		lod_sets[lod] = int(lod_sets[lod]) + mmi.multimesh.instance_count
+		if lod == 0:
 			drawn += mmi.multimesh.instance_count
 	_true("كل النسخ رُكّبت (%d)" % drawn, drawn == inst, "%d مقابل %d" % [drawn, inst])
+	_true("مستويات التفصيل مبنية (L1=%d، L2=%d)" % [lod_sets[1], lod_sets[2]],
+		int(lod_sets[1]) > 5000 and int(lod_sets[1]) == int(lod_sets[2]))
+
+	# كل مستوى له نطاق مسافة لا يتداخل مع ما قبله
+	var bad_band := 0
+	for c in world.scatter_root.get_children():
+		var mmi := c as MultiMeshInstance3D
+		if mmi == null: continue
+		if String(mmi.name).ends_with("_L1") and mmi.visibility_range_begin <= 0.0:
+			bad_band += 1
+		if String(mmi.name).ends_with("_L2") and mmi.visibility_range_begin <= 0.0:
+			bad_band += 1
+	_eq("النطاقات البعيدة تبدأ من مسافة", bad_band, 0)
+
+	# المباني أخذت مستويات تفصيل أيضاً
+	var one := lvl as ChapterOne
+	var ranged := 0
+	var total_gi := 0
+	for key in one.buildings:
+		var b: Node3D = one.buildings[key]
+		var counts := _count_ranges(b)
+		ranged += counts[0]
+		total_gi += counts[1]
+	_true("مجسّمات المباني لها مدى ظهور (%d/%d)" % [ranged, total_gi],
+		total_gi > 0 and float(ranged) / float(total_gi) > 0.9)
 
 	# كل نوع له شبكة ومدى ظهور
 	var missing := 0
@@ -139,6 +174,20 @@ func _test_live_daylight() -> void:
 	_true("السطوع يعمل حيّاً (%.2f ← %.2f)" % [dim, bright], bright > dim * 1.4)
 	Settings.set_value("brightness", 0.5)
 	Settings.set_value("time_of_day", "day")
+
+## يعيد [كم مجسّماً له مدى, إجمالي المجسّمات]
+func _count_ranges(root: Node) -> Array:
+	var ranged := 0
+	var total := 0
+	if root is GeometryInstance3D:
+		total += 1
+		if (root as GeometryInstance3D).visibility_range_end > 0.0:
+			ranged += 1
+	for c in root.get_children():
+		var r := _count_ranges(c)
+		ranged += int(r[0])
+		total += int(r[1])
+	return [ranged, total]
 
 func _eq(n: String, got, want) -> void:
 	if got == want: _ok(n)

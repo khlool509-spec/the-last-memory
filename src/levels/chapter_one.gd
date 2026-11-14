@@ -7,6 +7,7 @@ var world: WorldRenderer
 var _sun: DirectionalLight3D
 var _env: Environment
 var _lamps: Array[OmniLight3D] = []
+var _glows: Array[MeshInstance3D] = []
 var _preset: Dictionary = {}
 
 func _init() -> void:
@@ -87,18 +88,32 @@ func _apply_daylight() -> void:
 	var bright := float(Settings.get_value("brightness"))
 	_preset = Daylight.preset(key)
 	Daylight.apply(_env, _sun, key, bright)
+	WorldMaterials.set_foliage_tint(_preset.get("foliage_tint", Color.WHITE))
 	_fog_density = lerpf(float(_preset["fog_near"]), float(_preset["fog_far"]), 0.5)
 	_fog_color = _preset["fog_color"]
 	_scale_lamps()
 
-## الفوانيس وأضواء الداخل تخفت نهاراً فلا تبدو مصابيح في وضح الشمس
+## الفوانيس وأضواء الداخل تخفت نهاراً فلا تبدو مصابيح في وضح الشمس.
+## الزجاج المتوهّج يخفت معها، وإلا بقي مربعاً مضيئاً تحت الشمس.
 func _scale_lamps() -> void:
 	var k := float(_preset.get("lamp_scale", 1.0))
 	for l in _lamps:
 		if is_instance_valid(l):
 			l.light_energy = l.get_meta("base_energy", 2.0) * k
+	for g in _glows:
+		if is_instance_valid(g):
+			var m := g.material_override as StandardMaterial3D
+			if m:
+				m.emission_energy_multiplier = g.get_meta("base_emission", 2.0) * maxf(k, 0.18)
 
 func _register_lamps(root: Node) -> void:
+	if root is MeshInstance3D:
+		var mi := root as MeshInstance3D
+		var mm := mi.material_override as StandardMaterial3D
+		if mm and mm.emission_enabled and mm.emission_energy_multiplier > 1.0:
+			if not mi.has_meta("base_emission"):
+				mi.set_meta("base_emission", mm.emission_energy_multiplier)
+			_glows.append(mi)
 	if root is OmniLight3D:
 		var l := root as OmniLight3D
 		if not l.has_meta("base_energy"):
@@ -187,7 +202,17 @@ func place_contents() -> void:
 	_place_story_items()
 	_place_doors()
 	_place_triggers()
+	# مستويات التفصيل على كل ما بُني: مبانٍ وجسور ومعالم وما يُضاف لاحقاً
+	var qs := Lod.scale_for_quality(str(Settings.get_value("graphics_quality")))
+	var touched := 0
+	for group_name in ["Landmarks", "Bridges", "Story"]:
+		var g := get_node_or_null(group_name)
+		if g:
+			touched += Lod.apply(g, Lod.STRUCTURE, qs)
+	Lod.apply_lights(self, 52.0 * qs)
+
 	_lamps.clear()
+	_glows.clear()
 	_register_lamps(self)
 	_scale_lamps()
 

@@ -105,6 +105,7 @@ static func gable_roof(parent: Node3D, w: float, d: float, wall_h: float, rise: 
 		sb.add_child(mi)
 		sb.position = Vector3(s * span * 0.5, wall_h + rise * 0.5, 0)
 		sb.rotation.z = -s * angle
+		Lod.tag(sb, Lod.SILHOUETTE)
 		parent.add_child(sb)
 	# الجملون المثلث عند الطرفين
 	var gm := WorldMaterials.plain(WOOD_DARK, 0.95)
@@ -148,6 +149,7 @@ static func interior_light(parent: Node3D, pos: Vector3, energy: float = 1.6) ->
 static func table(parent: Node3D, pos: Vector3, rot_y: float = 0.0) -> void:
 	var m := WorldMaterials.plain(WOOD_MID, 0.9)
 	var holder := Node3D.new()
+	Lod.tag(holder, Lod.FURNITURE)
 	holder.position = pos
 	holder.rotation.y = rot_y
 	parent.add_child(holder)
@@ -159,6 +161,7 @@ static func table(parent: Node3D, pos: Vector3, rot_y: float = 0.0) -> void:
 static func shelf(parent: Node3D, pos: Vector3, rot_y: float = 0.0) -> void:
 	var m := WorldMaterials.plain(WOOD_DARK, 0.92)
 	var holder := Node3D.new()
+	Lod.tag(holder, Lod.FURNITURE)
 	holder.position = pos
 	holder.rotation.y = rot_y
 	parent.add_child(holder)
@@ -168,8 +171,10 @@ static func shelf(parent: Node3D, pos: Vector3, rot_y: float = 0.0) -> void:
 		box(holder, Vector3(0.08, 1.6, 0.32), Vector3(sx, 0.8, 0), m, false)
 
 static func crate(parent: Node3D, pos: Vector3, s: float = 0.6, rot_y: float = 0.0) -> Node3D:
-	return box(parent, Vector3(s, s, s), pos + Vector3(0, s * 0.5, 0),
+	var c := box(parent, Vector3(s, s, s), pos + Vector3(0, s * 0.5, 0),
 		WorldMaterials.plain(WOOD_PALE.darkened(0.15), 0.95), true, rot_y)
+	Lod.tag(c, Lod.PROP)
+	return c
 
 static func barrel(parent: Node3D, pos: Vector3) -> void:
 	var m := WorldMaterials.plain(WOOD_MID.darkened(0.2), 0.9)
@@ -190,10 +195,12 @@ static func barrel(parent: Node3D, pos: Vector3) -> void:
 	cs.shape = sh
 	sb.add_child(cs)
 	sb.position = pos + Vector3(0, 0.39, 0)
+	Lod.tag(sb, Lod.PROP)
 	parent.add_child(sb)
 
 static func bed(parent: Node3D, pos: Vector3, rot_y: float = 0.0) -> void:
 	var holder := Node3D.new()
+	Lod.tag(holder, Lod.FURNITURE)
 	holder.position = pos
 	holder.rotation.y = rot_y
 	parent.add_child(holder)
@@ -233,6 +240,7 @@ static func plank_bridge(world: WorldRenderer, center: Vector3, length: float, w
 	for sx in [-width * 0.42, width * 0.42]:
 		box(root, Vector3(0.16, 0.22, length), Vector3(sx, -0.20, 0), dark, false)
 	# درابزين
+	Lod.tag(root, Lod.STRUCTURE)
 	for sx in [-width * 0.5 + 0.08, width * 0.5 - 0.08]:
 		var posts := 7
 		for i in posts:

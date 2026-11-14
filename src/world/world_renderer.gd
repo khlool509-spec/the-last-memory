@@ -16,6 +16,9 @@ const RANGE := {
 }
 const CHUNK_RANGE := 300.0
 
+## أنواع تحمل سطحين بخامتين مختلفتين
+const MULTI_SURFACE := ["pine", "spruce", "oak", "birch", "willow", "dead", "bush", "fern", "grass"]
+
 var data: WorldData
 var terrain_root: Node3D
 var scatter_root: Node3D
@@ -77,16 +80,30 @@ func _build_collision() -> void:
 	body.add_child(cs)
 
 # ---------------- النبات ----------------
+## مستويات التفصيل: ثلاث نسخ من كل شجرة، تُعرض كل واحدة في نطاق مسافة.
+## هذا هو الفرق بين 2.9 مليون مثلث و ربعها، وهو شرط 60 إطاراً.
+const TREES := ["pine", "spruce", "oak", "birch", "willow", "dead"]
+const LOD_BANDS := [
+	{"detail": 1.00, "begin": 0.0,  "end": 34.0},
+	{"detail": 0.45, "begin": 34.0, "end": 76.0},
+	{"detail": 0.18, "begin": 76.0, "end": 0.0},   # 0 = حتى مدى النوع
+]
+const FADE := 6.0
+
+## مضاعف المسافات حسب إعداد الجودة
+var quality_scale: float = 1.0
+
 func _build_scatter() -> void:
 	scatter_root = Node3D.new()
 	scatter_root.name = "Scatter"
 	add_child(scatter_root)
+	quality_scale = _quality_scale()
+
 	var rng := RandomNumberGenerator.new()
 	rng.seed = WorldProfile.SEED
-
-	# تجميع المفاتيح حسب المقطع ليبقى ترتيب العقد مفهوماً
 	var keys: Array = data.scatter.keys()
 	keys.sort()
+
 	for key in keys:
 		var parts := str(key).split(":")
 		if parts.size() != 2:
@@ -97,37 +114,93 @@ func _build_scatter() -> void:
 		var count := int(arr.size() / 12.0)
 		if count == 0:
 			continue
+		var far: float = float(RANGE.get(species, 60.0)) * quality_scale
+		var colored := _colored_buffer(arr, count, species)
 
-		var mm := MultiMesh.new()
-		mm.transform_format = MultiMesh.TRANSFORM_3D
-		mm.mesh = _mesh_for(species, rng)
-		mm.instance_count = count
-		# المصفوفة مخبوزة بترتيب الـ buffer نفسه، فتُسنَد دفعة واحدة
-		mm.buffer = arr
+		if species in TREES:
+			for li in LOD_BANDS.size():
+				var band: Dictionary = LOD_BANDS[li]
+				var b0: float = float(band["begin"]) * quality_scale
+				var b1: float = float(band["end"]) * quality_scale
+				if b1 <= 0.0:
+					b1 = far
+				if b0 >= far:
+					continue
+				_add_batch(species, chunk_idx, colored, count, float(band["detail"]),
+					b0, minf(b1, far), li, rng)
+		else:
+			_add_batch(species, chunk_idx, colored, count, 1.0, 0.0, far, 0, rng)
 
-		var mmi := MultiMeshInstance3D.new()
-		mmi.name = "%s_%d" % [species, chunk_idx]
-		mmi.multimesh = mm
+func _add_batch(species: String, chunk_idx: int, buf: PackedFloat32Array, count: int,
+		detail: float, begin: float, end: float, lod: int, rng: RandomNumberGenerator) -> void:
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_colors = true
+	mm.mesh = _mesh_for(species, rng, detail, lod)
+	mm.instance_count = count
+	mm.buffer = buf
+
+	var mmi := MultiMeshInstance3D.new()
+	mmi.name = "%s_%d_L%d" % [species, chunk_idx, lod]
+	mmi.multimesh = mm
+	if not species in MULTI_SURFACE:
 		mmi.material_override = _mat_for(species)
-		mmi.visibility_range_end = float(RANGE.get(species, 60.0))
-		mmi.visibility_range_end_margin = 10.0
-		# الظلال أغلى ما في المشهد: تبقى للأشجار وحدها
-		mmi.cast_shadow = (GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-			if species in ["pine", "spruce", "oak", "birch", "willow", "dead", "rock_l"]
-			else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
-		# مركز المقطع: يجعل قصّ المدى والـ frustum صحيحاً
-		var ci := chunk_idx % data.grid
-		var cj := int(chunk_idx / data.grid)
-		mmi.position = Vector3.ZERO
-		scatter_root.add_child(mmi)
+	mmi.visibility_range_begin = begin
+	mmi.visibility_range_begin_margin = FADE if begin > 0.0 else 0.0
+	mmi.visibility_range_end = end
+	mmi.visibility_range_end_margin = FADE
+	# التلاشي المتبادل يمنع القفزة المفاجئة بين مستويين
+	mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+	mmi.cast_shadow = (GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		if (species in TREES or species == "rock_l") and lod == 0
+		else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
+	scatter_root.add_child(mmi)
 
-func _mesh_for(species: String, rng: RandomNumberGenerator) -> ArrayMesh:
-	if _mesh_cache.has(species):
-		return _mesh_cache[species]
+## يضيف لوناً لكل نسخة: تفاوت خفيف في الحرارة والسطوع.
+## شجرتان متجاورتان بنفس اللون تماماً هو أوضح ما يفضح التكرار.
+func _colored_buffer(src: PackedFloat32Array, count: int, species: String) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(count * 16)
+	var warm := 0.10
+	var bright := 0.16
+	if species in ["grass", "fern", "bush"]:
+		warm = 0.14
+		bright = 0.22
+	for k in count:
+		var si := k * 12
+		var di := k * 16
+		for j in 12:
+			out[di + j] = src[si + j]
+		# بذرة ثابتة من موضع النسخة: نفس الشجرة تأخذ نفس اللون دائماً
+		var px: float = src[si + 3]
+		var pz: float = src[si + 11]
+		var h: float = sin(px * 12.9898 + pz * 78.233) * 43758.5453
+		var n1: float = h - floor(h)
+		var h2: float = sin(px * 39.3468 + pz * 11.1357) * 24634.6345
+		var n2: float = h2 - floor(h2)
+		var w: float = (n1 - 0.5) * 2.0 * warm
+		var v: float = 1.0 + (n2 - 0.5) * 2.0 * bright
+		out[di + 12] = clampf((1.0 + w) * v, 0.45, 1.6)
+		out[di + 13] = clampf(v, 0.45, 1.6)
+		out[di + 14] = clampf((1.0 - w) * v, 0.45, 1.6)
+		out[di + 15] = 1.0
+	return out
+
+func _quality_scale() -> float:
+	var q := str(Settings.get_value("graphics_quality"))
+	match q:
+		"low": return 0.62
+		"medium": return 0.84
+	return 1.0
+
+func _mesh_for(species: String, rng: RandomNumberGenerator, detail: float, lod: int) -> ArrayMesh:
+	var key := "%s|%d" % [species, lod]
+	if _mesh_cache.has(key):
+		return _mesh_cache[key]
 	var r := RandomNumberGenerator.new()
 	r.seed = hash(species) + WorldProfile.SEED
-	var m := PlantMeshes.build(species, r)
-	_mesh_cache[species] = m
+	var m := PlantMeshes.build(species, r, detail)
+	_mesh_cache[key] = m
 	return m
 
 func _mat_for(species: String) -> Material:

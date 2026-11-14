@@ -2,5 +2,5 @@
 
 [ext_resource type="Script" path="res://tests/world_test.gd" id="1_haqsc"]
 
-[node name="WorldTest" type="Node" unique_id=956365517]
+[node name="WorldTest" type="Node" unique_id=1388361343]
 script = ExtResource("1_haqsc")

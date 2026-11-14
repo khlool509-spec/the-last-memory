@@ -10,14 +10,14 @@ const NAMES := ["water", "shore", "meadow", "forest", "deep", "rocky", "clearing
 
 ## ألوان الأرض لكل منطقة — تُخبز في ألوان رؤوس الشبكة
 const GROUND := {
-	Kind.WATER:    Color(0.106, 0.122, 0.118),
-	Kind.SHORE:    Color(0.263, 0.243, 0.196),
-	Kind.MEADOW:   Color(0.169, 0.204, 0.129),
-	Kind.FOREST:   Color(0.110, 0.141, 0.098),
-	Kind.DEEP:     Color(0.071, 0.098, 0.071),
-	Kind.ROCKY:    Color(0.204, 0.204, 0.196),
-	Kind.CLEARING: Color(0.192, 0.216, 0.141),
-	Kind.SETTLED:  Color(0.173, 0.157, 0.122),
+	Kind.WATER:    Color(0.149, 0.176, 0.165),
+	Kind.SHORE:    Color(0.451, 0.412, 0.329),
+	Kind.MEADOW:   Color(0.361, 0.439, 0.243),
+	Kind.FOREST:   Color(0.251, 0.318, 0.192),
+	Kind.DEEP:     Color(0.184, 0.243, 0.157),
+	Kind.ROCKY:    Color(0.404, 0.400, 0.380),
+	Kind.CLEARING: Color(0.420, 0.467, 0.286),
+	Kind.SETTLED:  Color(0.376, 0.337, 0.255),
 }
 
 var _wp: WorldProfile
@@ -59,7 +59,7 @@ func ground_color(x: float, z: float) -> Color:
 	var k := at(x, z)
 	var c: Color = GROUND[k]
 	# تفاوت لوني ناعم فلا تبدو المنطقة لوناً واحداً مسطّحاً
-	var v := _patch.get_noise_2d(x * 3.1, z * 3.1) * 0.055
+	var v := _patch.get_noise_2d(x * 3.1, z * 3.1) * 0.085
 	return Color(clampf(c.r + v, 0.0, 1.0), clampf(c.g + v * 1.2, 0.0, 1.0), clampf(c.b + v * 0.8, 0.0, 1.0), 1.0)
 
 ## كثافة الأشجار: نسبة 0..1 تُضرب في الكثافة الأساسية
