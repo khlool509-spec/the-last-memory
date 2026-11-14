@@ -33,6 +33,7 @@ func _ready() -> void:
 	await _test_interiors()
 	await _test_walk()
 	_test_scatter_rules()
+	_test_live_daylight()
 	print("\n=== العالم: %d نجح، %d أخفق ===" % [_pass, _fail])
 	get_tree().quit(_fail)
 
@@ -100,6 +101,44 @@ func _test_data_integrity() -> void:
 			no_range += 1
 	_eq("كل مجموعة لها مجسّم", missing, 0)
 	_eq("كل مجموعة لها مدى ظهور", no_range, 0)
+
+## تبديل الوقت من الإعدادات يغيّر المشهد الحيّ فوراً
+func _test_live_daylight() -> void:
+	print("\n[تبديل الوقت داخل اللعب]")
+	var one := lvl as ChapterOne
+	if one == null or one._env == null:
+		_no("البيئة موجودة")
+		return
+	Settings.set_value("time_of_day", "night")
+	var n_exp := one._env.tonemap_exposure
+	var n_sun := one._sun.light_energy
+	var n_lamp := 0.0
+	for l in one._lamps:
+		if is_instance_valid(l):
+			n_lamp = maxf(n_lamp, l.light_energy)
+
+	Settings.set_value("time_of_day", "day")
+	var d_exp := one._env.tonemap_exposure
+	var d_sun := one._sun.light_energy
+	var d_lamp := 0.0
+	for l in one._lamps:
+		if is_instance_valid(l):
+			d_lamp = maxf(d_lamp, l.light_energy)
+
+	_true("الشمس تشتدّ نهاراً (%.2f ← %.2f)" % [n_sun, d_sun], d_sun > n_sun)
+	_true("الفوانيس تخفت نهاراً (%.2f ← %.2f)" % [n_lamp, d_lamp],
+		one._lamps.size() > 0 and d_lamp < n_lamp * 0.5)
+	_true("أضواء مسجَّلة (%d)" % one._lamps.size(), one._lamps.size() >= 8)
+	_true("اتجاه الضوء تغيّر", not n_exp == 0.0)
+
+	# السطوع يرفع التعريض حيّاً
+	Settings.set_value("brightness", 0.1)
+	var dim := one._env.tonemap_exposure
+	Settings.set_value("brightness", 0.9)
+	var bright := one._env.tonemap_exposure
+	_true("السطوع يعمل حيّاً (%.2f ← %.2f)" % [dim, bright], bright > dim * 1.4)
+	Settings.set_value("brightness", 0.5)
+	Settings.set_value("time_of_day", "day")
 
 func _eq(n: String, got, want) -> void:
 	if got == want: _ok(n)

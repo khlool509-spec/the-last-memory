@@ -32,6 +32,7 @@ func _ready() -> void:
 	_test_objectives()
 	_test_chapter_unlock()
 	_test_audio()
+	_test_daylight()
 	_test_interactor()
 	_test_pickup()
 	_test_door()
@@ -212,6 +213,60 @@ func _test_audio() -> void:
 	_ok("مفتاح صوت مجهول لا يُسقط اللعبة")
 	Audio.stop_all()
 	_true("الإيقاف يعمل", not Audio._music.playing and not Audio._ambient.playing)
+
+# ---------- وقت اليوم والسطوع ----------
+func _test_daylight() -> void:
+	print("\n[وقت اليوم والسطوع]")
+	_eq("الافتراضي نهار", str(Settings.DEFAULTS["time_of_day"]), "day")
+	_true("السطوع الافتراضي في المنتصف",
+		is_equal_approx(float(Settings.DEFAULTS["brightness"]), 0.5))
+	_eq("ثلاثة أوقات", Daylight.KEYS.size(), 3)
+	_eq("لكل وقت اسم عربي", Daylight.LABELS.size(), Daylight.KEYS.size())
+
+	# كل وقت مختلف فعلاً، لا مجرد اسم
+	var energies: Array[float] = []
+	var fogs: Array[float] = []
+	for k in Daylight.KEYS:
+		var pr := Daylight.preset(k)
+		energies.append(float(pr["sun_energy"]))
+		fogs.append(float(pr["fog_far"]))
+	_true("النهار أسطع من الليل (%.2f مقابل %.2f)" % [energies[0], energies[2]],
+		energies[0] > energies[2] * 1.8)
+	_true("ضباب الليل أثقل من ضباب النهار (%.4f مقابل %.4f)" % [fogs[2], fogs[0]],
+		fogs[2] > fogs[0] * 2.0)
+	_true("فوانيس النهار تخفت",
+		float(Daylight.preset("day")["lamp_scale"]) < 0.3
+		and is_equal_approx(float(Daylight.preset("night")["lamp_scale"]), 1.0))
+
+	# السطوع: رتيب ومحصور
+	var lo := Daylight.exposure_multiplier(0.0)
+	var mid := Daylight.exposure_multiplier(0.5)
+	var hi := Daylight.exposure_multiplier(1.0)
+	_true("السطوع يتصاعد (%.2f < %.2f < %.2f)" % [lo, mid, hi], lo < mid and mid < hi)
+	_true("محصور في مدى آمن", lo > 0.6 and hi < 2.0)
+	_true("القيم الشاذة تُقصّ",
+		is_equal_approx(Daylight.exposure_multiplier(-5.0), lo)
+		and is_equal_approx(Daylight.exposure_multiplier(9.0), hi))
+
+	# التطبيق يغيّر البيئة فعلاً
+	var env := Environment.new()
+	var sky := Sky.new()
+	sky.sky_material = ProceduralSkyMaterial.new()
+	env.sky = sky
+	var sun := DirectionalLight3D.new()
+	Daylight.apply(env, sun, "night", 0.5)
+	var night_exp := env.tonemap_exposure
+	var night_sun := sun.light_energy
+	var night_top: Color = (env.sky.sky_material as ProceduralSkyMaterial).sky_top_color
+	Daylight.apply(env, sun, "day", 0.5)
+	_true("التطبيق يرفع طاقة الشمس (%.2f ← %.2f)" % [night_sun, sun.light_energy],
+		sun.light_energy > night_sun)
+	_true("ويفتح لون السماء",
+		(env.sky.sky_material as ProceduralSkyMaterial).sky_top_color.v > night_top.v * 1.5)
+	_true("ويبعّد نهاية الضباب", env.fog_depth_end > 250.0)
+	Daylight.apply(env, sun, "day", 1.0)
+	_true("رفع السطوع يرفع التعريض", env.tonemap_exposure > night_exp)
+	sun.free()
 
 # ---------- كاشف التفاعل ----------
 func _test_interactor() -> void:

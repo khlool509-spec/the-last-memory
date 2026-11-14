@@ -4,8 +4,10 @@ extends GameLevel
 ## كل الشكل يأتي من WorldProfile المخبوز؛ هنا يُركَّب ويُسكَن.
 
 var world: WorldRenderer
-var _moon: DirectionalLight3D
+var _sun: DirectionalLight3D
 var _env: Environment
+var _lamps: Array[OmniLight3D] = []
+var _preset: Dictionary = {}
 
 func _init() -> void:
 	chapter_index = 1
@@ -46,22 +48,15 @@ func _build_environment() -> void:
 	sky.sky_material = sm
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 0.42
-	env.ambient_light_color = Color(0.173, 0.208, 0.278)
 
 	# ضباب عمقي: العمق البصري ومحدّد المدى معاً. الحجمي غير مدعوم هنا.
 	env.fog_enabled = true
 	env.fog_mode = Environment.FOG_MODE_DEPTH
-	env.fog_light_color = Color(0.094, 0.122, 0.165)
-	env.fog_light_energy = 0.9
-	env.fog_density = 0.016
-	env.fog_depth_begin = 16.0
-	env.fog_depth_end = 142.0
-	env.fog_sky_affect = 0.45
+	env.fog_light_energy = 1.0
+	env.fog_density = 0.010
 	env.fog_aerial_perspective = 0.35
 
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
-	env.tonemap_exposure = 1.12
 	env.tonemap_white = 5.0
 	env.glow_enabled = true
 	env.glow_intensity = 0.5
@@ -69,22 +64,48 @@ func _build_environment() -> void:
 	env.glow_hdr_threshold = 0.95
 	env.adjustment_enabled = true
 	env.adjustment_contrast = 1.08
-	env.adjustment_saturation = 0.9
 	we.environment = env
 	_env = env
 	add_child(we)
 
-	_moon = DirectionalLight3D.new()
-	_moon.name = "Moonlight"
-	_moon.light_color = Color(0.639, 0.725, 0.886)
-	_moon.light_energy = 0.70
-	_moon.shadow_enabled = true
-	_moon.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-	_moon.directional_shadow_max_distance = 72.0
-	_moon.shadow_bias = 0.045
-	_moon.shadow_normal_bias = 1.4
-	_moon.transform = Transform3D(Basis(), Vector3(60, 90, 40)).looking_at(Vector3.ZERO, Vector3.UP)
-	add_child(_moon)
+	_sun = DirectionalLight3D.new()
+	_sun.name = "KeyLight"
+	_sun.shadow_enabled = true
+	_sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+	_sun.shadow_bias = 0.045
+	_sun.shadow_normal_bias = 1.4
+	add_child(_sun)
+
+	_apply_daylight()
+	Settings.changed.connect(func(key: String, _v: Variant) -> void:
+		if key == "time_of_day" or key == "brightness":
+			_apply_daylight())
+
+## يطبّق وقت اليوم والسطوع على كل ما يتأثر بهما معاً
+func _apply_daylight() -> void:
+	var key := str(Settings.get_value("time_of_day"))
+	var bright := float(Settings.get_value("brightness"))
+	_preset = Daylight.preset(key)
+	Daylight.apply(_env, _sun, key, bright)
+	_fog_density = lerpf(float(_preset["fog_near"]), float(_preset["fog_far"]), 0.5)
+	_fog_color = _preset["fog_color"]
+	_scale_lamps()
+
+## الفوانيس وأضواء الداخل تخفت نهاراً فلا تبدو مصابيح في وضح الشمس
+func _scale_lamps() -> void:
+	var k := float(_preset.get("lamp_scale", 1.0))
+	for l in _lamps:
+		if is_instance_valid(l):
+			l.light_energy = l.get_meta("base_energy", 2.0) * k
+
+func _register_lamps(root: Node) -> void:
+	if root is OmniLight3D:
+		var l := root as OmniLight3D
+		if not l.has_meta("base_energy"):
+			l.set_meta("base_energy", l.light_energy)
+		_lamps.append(l)
+	for c in root.get_children():
+		_register_lamps(c)
 
 # ---------------- الجسور ----------------
 ## الطرق تعبر النهر؛ بلا جسر يسقط اللاعب في الماء.
@@ -166,6 +187,9 @@ func place_contents() -> void:
 	_place_story_items()
 	_place_doors()
 	_place_triggers()
+	_lamps.clear()
+	_register_lamps(self)
+	_scale_lamps()
 
 ## الأهداف تتقدّم بالوصول إلى أماكن حقيقية، لا بعدّاد خفي
 func _place_triggers() -> void:
@@ -372,10 +396,13 @@ func _zone_update() -> void:
 			player.surface = "grass"
 
 	# الضباب يثقل في بطن الوادي ويخفّ على المرتفعات
-	var want_density := lerpf(0.030, 0.0085, open)
+	var f_far := float(_preset.get("fog_far", 0.030))
+	var f_near := float(_preset.get("fog_near", 0.0085))
+	var want_density := lerpf(f_far, f_near, open)
 	if inside:
-		want_density = 0.004
-	var want_color := Color(0.094, 0.122, 0.165).lerp(Color(0.122, 0.141, 0.169), w_river)
+		want_density = f_near * 0.45
+	var base_fog: Color = _preset.get("fog_color", Color(0.094, 0.122, 0.165))
+	var want_color := base_fog.lerp(base_fog.lightened(0.06), w_river)
 	_fog_density = lerpf(_fog_density, want_density, 0.12)
 	_fog_color = _fog_color.lerp(want_color, 0.12)
 	if _env:

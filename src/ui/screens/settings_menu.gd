@@ -52,8 +52,13 @@ func _ready() -> void:
 	_rows.append(_add(col, SettingSlider.new("music_volume", "الموسيقى", "♫")))
 	_rows.append(_add(col, SettingSlider.new("sfx_volume", "المؤثرات", "♬")))
 	_rows.append(_add(col, SettingSlider.new("camera_sensitivity", "حساسية الكاميرا", "◎")))
+	_rows.append(_add(col, SettingSlider.new("brightness", "سطوع الصورة", "☀")))
 
 	col.add_child(_separator())
+
+	_rows.append(_add(col, OptionCycler.new(
+		"time_of_day", "وقت اليوم",
+		Daylight.KEYS, Daylight.LABELS, "◐")))
 
 	_rows.append(_add(col, OptionCycler.new(
 		"graphics_quality", "جودة الرسومات",
