@@ -196,13 +196,118 @@ def heartbeat():
         x[i:] += thump * amp
     return fade(x / (np.max(np.abs(x)) + 1e-9) * 0.55, 10)
 
+
+# ---------- جريان الماء ----------
+def river_flow(dur=18.0):
+    ts = t(dur)
+    n = rng.standard_normal(len(ts))
+    # الماء: ضجيج عريض مرشّح، مع تموّج بطيء يوحي بالتيار
+    body = highpass_fft(lowpass_fft(n, 2600.0), 320.0)
+    body /= (np.max(np.abs(body)) + 1e-9)
+    swell = 0.62 + 0.38 * (0.5 + 0.5 * np.sin(2 * np.pi * 0.09 * ts + 0.4))
+    swell *= 0.85 + 0.15 * np.sin(2 * np.pi * 0.23 * ts)
+    out = body * swell * 0.40
+    # خرير فوق الحصى: نبضات عالية متفرقة
+    gurgle = highpass_fft(rng.standard_normal(len(ts)), 1700.0)
+    gate = np.clip(np.sin(2 * np.pi * 1.9 * ts + np.sin(2 * np.pi * 0.37 * ts) * 2.2), 0, 1) ** 3
+    out += gurgle / (np.max(np.abs(gurgle)) + 1e-9) * gate * 0.13
+    # ثقل منخفض
+    out += lowpass_fft(n, 190.0) / (np.max(np.abs(n)) + 1e-9) * 0.09
+    return loopable(out, 600)
+
+# ---------- طيور ليلية متفرقة ----------
+def night_birds(dur=26.0):
+    ts = t(dur)
+    out = np.zeros(len(ts))
+    r = np.random.default_rng(515)
+    for _ in range(14):
+        start = r.integers(0, len(ts) - int(SR * 1.5))
+        d = r.uniform(0.12, 0.42)
+        n = int(SR * d)
+        ct = np.linspace(0, d, n, endpoint=False)
+        f0 = r.uniform(900, 2600)
+        sweep = f0 * (1.0 + r.uniform(-0.35, 0.45) * ct / max(d, 1e-6))
+        call = np.sin(2 * np.pi * sweep * ct)
+        call += np.sin(2 * np.pi * sweep * 2.01 * ct) * 0.3
+        env = np.sin(np.pi * np.clip(ct / d, 0, 1)) ** 1.6
+        out[start:start + n] += call * env * r.uniform(0.06, 0.16)
+    # بومة بعيدة
+    for _ in range(3):
+        start = r.integers(0, len(ts) - int(SR * 2.0))
+        d = 0.9
+        n = int(SR * d)
+        ct = np.linspace(0, d, n, endpoint=False)
+        hoot = np.sin(2 * np.pi * 330.0 * ct) * 0.6 + np.sin(2 * np.pi * 165.0 * ct) * 0.4
+        env = np.exp(-3.0 * ct) * (1 - np.exp(-40 * ct))
+        out[start:start + n] += lowpass_fft(hoot * env, 800.0) * 0.14
+    return loopable(out, 700)
+
+# ---------- داخل المباني ----------
+def indoor_room(dur=16.0):
+    ts = t(dur)
+    n = rng.standard_normal(len(ts))
+    hum = lowpass_fft(n, 140.0)
+    hum /= (np.max(np.abs(hum)) + 1e-9)
+    out = hum * 0.16 * (0.75 + 0.25 * np.sin(2 * np.pi * 0.04 * ts))
+    # طقطقة خشب متباعدة
+    r = np.random.default_rng(828)
+    for _ in range(7):
+        start = r.integers(0, len(ts) - int(SR * 0.5))
+        d = r.uniform(0.05, 0.16)
+        nn = int(SR * d)
+        ct = np.linspace(0, d, nn, endpoint=False)
+        crack = np.sin(2 * np.pi * r.uniform(180, 520) * ct) * np.exp(-28 * ct)
+        out[start:start + nn] += crack * r.uniform(0.05, 0.12)
+    return loopable(out, 500)
+
+# ---------- خطوات على أسطح مختلفة ----------
+def footstep_surface(seed, kind):
+    r = np.random.default_rng(seed)
+    d = 0.21
+    ts = t(d)
+    n = r.standard_normal(len(ts))
+    if kind == "grass":
+        body = highpass_fft(lowpass_fft(n, 3200.0), 900.0)
+        env = np.exp(-r.uniform(20, 28) * ts)
+        thump = np.sin(2 * np.pi * r.uniform(52, 70) * ts) * np.exp(-40 * ts) * 0.28
+        amp = r.uniform(0.38, 0.52)
+    elif kind == "wood":
+        body = lowpass_fft(n, 1400.0)
+        env = np.exp(-r.uniform(16, 22) * ts)
+        thump = (np.sin(2 * np.pi * r.uniform(130, 190) * ts) * np.exp(-24 * ts) * 0.55
+                 + np.sin(2 * np.pi * r.uniform(62, 86) * ts) * np.exp(-30 * ts) * 0.4)
+        amp = r.uniform(0.55, 0.72)
+    elif kind == "stone":
+        body = highpass_fft(n, 1800.0)
+        env = np.exp(-r.uniform(34, 46) * ts)
+        thump = np.sin(2 * np.pi * r.uniform(90, 130) * ts) * np.exp(-52 * ts) * 0.42
+        amp = r.uniform(0.5, 0.66)
+    else:  # water
+        body = highpass_fft(lowpass_fft(n, 4200.0), 600.0)
+        env = np.exp(-r.uniform(11, 16) * ts) * (1 - np.exp(-80 * ts))
+        thump = np.sin(2 * np.pi * r.uniform(70, 95) * ts) * np.exp(-26 * ts) * 0.3
+        amp = r.uniform(0.5, 0.7)
+    x = body / (np.max(np.abs(body)) + 1e-9) * env + thump
+    return fade(x / (np.max(np.abs(x)) + 1e-9) * amp, 4)
+
 FILES = [
     ("assets/audio/ambient/forest_night.wav", ambient_forest),
+    ("assets/audio/ambient/river_flow.wav", river_flow),
+    ("assets/audio/ambient/night_birds.wav", night_birds),
+    ("assets/audio/ambient/indoor_room.wav", indoor_room),
     ("assets/audio/music/menu_drone.wav", menu_drone),
     ("assets/audio/sfx/footstep_1.wav", lambda: footstep(11)),
     ("assets/audio/sfx/footstep_2.wav", lambda: footstep(22)),
     ("assets/audio/sfx/footstep_3.wav", lambda: footstep(33)),
     ("assets/audio/sfx/footstep_4.wav", lambda: footstep(44)),
+    ("assets/audio/sfx/step_grass_1.wav", lambda: footstep_surface(901, "grass")),
+    ("assets/audio/sfx/step_grass_2.wav", lambda: footstep_surface(902, "grass")),
+    ("assets/audio/sfx/step_wood_1.wav", lambda: footstep_surface(911, "wood")),
+    ("assets/audio/sfx/step_wood_2.wav", lambda: footstep_surface(912, "wood")),
+    ("assets/audio/sfx/step_stone_1.wav", lambda: footstep_surface(921, "stone")),
+    ("assets/audio/sfx/step_stone_2.wav", lambda: footstep_surface(922, "stone")),
+    ("assets/audio/sfx/step_water_1.wav", lambda: footstep_surface(931, "water")),
+    ("assets/audio/sfx/step_water_2.wav", lambda: footstep_surface(932, "water")),
     ("assets/audio/sfx/pickup.wav", pickup),
     ("assets/audio/sfx/note.wav", note_rustle),
     ("assets/audio/sfx/ui_click.wav", lambda: ui_tick(False)),

@@ -84,6 +84,24 @@ if [ "$CODE" -eq 0 ]; then
   fi
 fi
 
+# اختبارات العالم المفتوح: فيزياء حقيقية على التضاريس المخبوزة
+if [ "$CODE" -eq 0 ]; then
+  echo
+  OUT=$("$GODOT" --headless --path "$ROOT" res://tests/world_test.tscn 2>&1)
+  RC=$?
+  echo "$OUT" | sed -n '/=== اختبارات العالم ===/,$p'
+  BAD=$(echo "$OUT" | grep -vE "$EXIT_NOISE" | grep -ciE "SCRIPT ERROR|Parse Error|Cannot call|Invalid (call|get|set|access)|null instance" || true)
+  if [ "$RC" -ne 0 ]; then
+    echo "  >> أخفقت اختبارات العالم (عدد الإخفاقات=$RC)"
+    CODE=$((CODE + RC))
+  fi
+  if [ "$BAD" -gt 0 ]; then
+    echo "  >> أخطاء تشغيل أثناء اختبارات العالم: $BAD"
+    echo "$OUT" | grep -vE "$EXIT_NOISE" | grep -iE "SCRIPT ERROR|Parse Error|Cannot call|Invalid|null instance" | head -8
+    CODE=$((CODE + BAD))
+  fi
+fi
+
 # فحص التخطيط: يكشف العناصر صفرية المساحة أو الخارجة عن الكادر
 if [ "$CODE" -eq 0 ]; then
   echo

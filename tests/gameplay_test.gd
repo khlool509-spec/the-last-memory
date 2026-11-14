@@ -36,7 +36,6 @@ func _ready() -> void:
 	_test_pickup()
 	_test_door()
 	await _test_chapter_one()
-	await _test_level_layout()
 	print("\n=== اللعب: %d نجح، %d أخفق ===" % [_pass, _fail])
 	get_tree().quit(_fail)
 
@@ -340,12 +339,17 @@ func _test_chapter_one() -> void:
 	var inter := get_tree().get_nodes_in_group("interactable")
 	_true("عناصر تفاعل موزّعة (%d)" % inter.size(), inter.size() >= 5)
 
-	var trees := _find_named(lvl, "NearTrees")
-	_true("أشجار قريبة بتصادم (%d)" % (trees.get_child_count() if trees else 0),
-		trees != null and trees.get_child_count() >= 30)
-
+	var one := lvl as ChapterOne
+	_true("العالم مُركَّب", one != null and one.world != null)
+	if one and one.world:
+		_true("مقاطع الأرض محمّلة", one.world.terrain_root.get_child_count() == 100)
+		_true("تصادم التضاريس موجود", one.world.body != null)
+		var sc := one.world.scatter_root.get_child_count()
+		_true("مجموعات النبات (%d)" % sc, sc > 600)
 	var gate := _find_named(lvl, "AncientGate")
 	_true("البوابة الأثرية موجودة", gate != null)
+	_true("المباني مبنية (%d)" % (one.buildings.size() if one else 0),
+		one != null and one.buildings.size() >= 5)
 
 	_true("نقطة البداية فوق الأرض", lvl.player.position.y > 0.5)
 	_true("الفصل سُجّل في الحفظ", int(SaveSystem.data.get("chapter", 0)) == 1)
@@ -369,80 +373,6 @@ func _test_chapter_one() -> void:
 	var moved: float = Vector2(lvl.player.global_position.x - p0.x,
 		lvl.player.global_position.z - p0.z).length()
 	_true("الإدخال يحرّك اللاعب (%.2f م)" % moved, moved > 0.8)
-
-	lvl.queue_free()
-
-# ---------- توزيع المرحلة ----------
-## خادم العرض الوهمي يُهمل بيانات MultiMesh فلا تُقرأ مواضع الأشجار منه.
-## لذلك يحفظها الباني كبيانات وصفية، وهنا يُختبر التوزيع نفسه:
-## الممر سالك، والأشجار كثيفة، والفوانيس والأغراض على الطريق.
-func _test_level_layout() -> void:
-	print("\n[توزيع الغابة]")
-	var packed: PackedScene = load("res://levels/ch01_forest/chapter_one.tscn")
-	var lvl := packed.instantiate() as ChapterOne
-	add_child(lvl)
-	await get_tree().process_frame
-
-	var pts := lvl._path_points()
-	_true("للممر نقاط كافية (%d)" % pts.size(), pts.size() >= 5)
-
-	var field := _find_named(lvl, "TreeField")
-	_true("حقل الأشجار موجود", field != null)
-	var spots: Array = field.get_meta("spots", []) if field else []
-	_true("غابة كثيفة (%d شجرة بصرية)" % spots.size(), spots.size() >= 380)
-
-	var near := _find_named(lvl, "NearTrees")
-	var solid := near.get_child_count() if near else 0
-	_true("أشجار صلبة على الطريق (%d)" % solid, solid >= 40)
-
-	# لا شجرة تسدّ الممر
-	var blocking := 0
-	var closest := INF
-	for v in spots:
-		var d := lvl._dist_to_path(v)
-		closest = minf(closest, d)
-		if d < 2.6:
-			blocking += 1
-	if near:
-		for c in near.get_children():
-			var d := lvl._dist_to_path((c as Node3D).position)
-			closest = minf(closest, d)
-			if d < 2.6:
-				blocking += 1
-	_eq("لا شجرة تسدّ الممر", blocking, 0)
-	_true("أقرب شجرة %.1f م عن المحور" % closest, closest >= 2.6)
-
-	# الأشجار الصلبة موزّعة على طول الممر لا متكدّسة عند البداية
-	if near and solid > 0:
-		var zmin := INF
-		var zmax := -INF
-		for c in near.get_children():
-			var z: float = (c as Node3D).position.z
-			zmin = minf(zmin, z)
-			zmax = maxf(zmax, z)
-		var span := zmax - zmin
-		_true("موزّعة على طول الممر (%.0f م)" % span, span >= 40.0)
-
-	# الفوانيس ترشد: كلها قريبة من الممر
-	var lanterns := _find_named(lvl, "Lanterns")
-	var far_lantern := 0
-	if lanterns:
-		for c in lanterns.get_children():
-			if lvl._dist_to_path((c as Node3D).position) > 4.0:
-				far_lantern += 1
-	_eq("كل الفوانيس على الطريق", far_lantern, 0)
-
-	# كل عنصر تفاعل في متناول الماشي على الممر
-	var stray := 0
-	for n in get_tree().get_nodes_in_group("interactable"):
-		if lvl._dist_to_path((n as Node3D).position) > 8.0:
-			stray += 1
-			print("    بعيد: ", n.name)
-	_eq("كل الأغراض قرب الممر", stray, 0)
-
-	var bounds := _find_named(lvl, "Bounds")
-	_true("حدود المرحلة موجودة", bounds != null)
-	_eq("أربعة جدران", bounds.get_child_count() if bounds else 0, 4)
 
 	lvl.queue_free()
 

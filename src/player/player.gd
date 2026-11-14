@@ -24,6 +24,8 @@ var stamina: float = 100.0
 var _gravity: float = 9.8
 var _was_on_floor: bool = true
 var _step_accum: float = 0.0
+## السطح الذي يقف عليه: تحدّثه المرحلة، ويغيّر صوت الخطوة
+var surface: String = "grass"
 ## المسافة بين خطوتين بالأمتار — ثابتة بالمسافة لا بالزمن،
 ## فلا تتسارع النقرات حين يتسارع اللاعب.
 const STEP_WALK := 1.9
@@ -79,7 +81,7 @@ func _physics_process(delta: float) -> void:
 
 	# هبوط بعد قفزة: نقرة أقوى
 	if is_on_floor() and not _was_on_floor:
-		Audio.play_footstep(true)
+		Audio.play_surface_step(surface, true)
 	_was_on_floor = is_on_floor()
 
 func _update_footsteps(_delta: float) -> void:
@@ -94,7 +96,7 @@ func _update_footsteps(_delta: float) -> void:
 	var stride := STEP_RUN if is_running() else STEP_WALK
 	if _step_accum >= stride:
 		_step_accum = 0.0
-		Audio.play_footstep(is_running())
+		Audio.play_surface_step(surface, is_running())
 
 func _update_stamina(delta: float) -> void:
 	var before := stamina

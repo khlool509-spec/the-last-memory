@@ -8,12 +8,28 @@ const MUSIC := {
 }
 const AMBIENT := {
 	"forest": "res://assets/audio/ambient/forest_night.wav",
+	"river": "res://assets/audio/ambient/river_flow.wav",
+	"birds": "res://assets/audio/ambient/night_birds.wav",
+	"indoor": "res://assets/audio/ambient/indoor_room.wav",
 }
+
+## طبقات الجو: تعمل معاً وتُمزج حسب مكان اللاعب، فيتغيّر الصوت
+## بالمشي لا بالانتقال بين "مناطق" مقطوعة.
+const LAYERS := ["forest", "river", "birds", "indoor"]
+const LAYER_DB := {"forest": -6.0, "river": -4.0, "birds": -9.0, "indoor": -8.0}
 const SFX := {
 	"footstep_1": "res://assets/audio/sfx/footstep_1.wav",
 	"footstep_2": "res://assets/audio/sfx/footstep_2.wav",
 	"footstep_3": "res://assets/audio/sfx/footstep_3.wav",
 	"footstep_4": "res://assets/audio/sfx/footstep_4.wav",
+	"step_grass_1": "res://assets/audio/sfx/step_grass_1.wav",
+	"step_grass_2": "res://assets/audio/sfx/step_grass_2.wav",
+	"step_wood_1": "res://assets/audio/sfx/step_wood_1.wav",
+	"step_wood_2": "res://assets/audio/sfx/step_wood_2.wav",
+	"step_stone_1": "res://assets/audio/sfx/step_stone_1.wav",
+	"step_stone_2": "res://assets/audio/sfx/step_stone_2.wav",
+	"step_water_1": "res://assets/audio/sfx/step_water_1.wav",
+	"step_water_2": "res://assets/audio/sfx/step_water_2.wav",
 	"pickup": "res://assets/audio/sfx/pickup.wav",
 	"note": "res://assets/audio/sfx/note.wav",
 	"ui_click": "res://assets/audio/sfx/ui_click.wav",
@@ -26,6 +42,8 @@ const SFX_VOICES := 8
 
 var _music: AudioStreamPlayer
 var _ambient: AudioStreamPlayer
+var _layers: Dictionary = {}          # اسم الطبقة -> AudioStreamPlayer
+var _layer_target: Dictionary = {}    # الوزن المطلوب 0..1
 var _voices: Array[AudioStreamPlayer] = []
 var _voice_i := 0
 var _cache: Dictionary = {}
@@ -48,6 +66,15 @@ func _ready() -> void:
 	_ambient.volume_db = -6.0
 	add_child(_ambient)
 
+	for key in LAYERS:
+		var lp := AudioStreamPlayer.new()
+		lp.name = "Layer_" + key
+		lp.bus = "Music"
+		lp.volume_db = -80.0
+		add_child(lp)
+		_layers[key] = lp
+		_layer_target[key] = 0.0
+
 	for i in SFX_VOICES:
 		var p := AudioStreamPlayer.new()
 		p.name = "SFX%d" % i
@@ -61,9 +88,47 @@ func _ready() -> void:
 	Inv.item_added.connect(func(_id: String) -> void: play("pickup"))
 	Inv.note_added.connect(func(_id: String) -> void: play("note"))
 
+## مزج الطبقات: يُستدعى من المرحلة بأوزان حسب موقع اللاعب.
+## الانتقال تدريجي فلا يُسمع قطع عند عبور حدٍّ ما.
+func set_layer_mix(weights: Dictionary) -> void:
+	for key in LAYERS:
+		_layer_target[key] = clampf(float(weights.get(key, 0.0)), 0.0, 1.0)
+		var lp: AudioStreamPlayer = _layers[key]
+		if _layer_target[key] > 0.01 and not lp.playing:
+			var s := _stream(str(AMBIENT[key]), true)
+			if s != null:
+				lp.stream = s
+				lp.volume_db = -80.0
+				lp.play()
+
+func _process(delta: float) -> void:
+	for key in LAYERS:
+		var lp: AudioStreamPlayer = _layers.get(key)
+		if lp == null:
+			continue
+		var want: float = float(_layer_target.get(key, 0.0))
+		var target_db := -80.0 if want <= 0.01 else linear_to_db(want) + float(LAYER_DB[key])
+		lp.volume_db = move_toward(lp.volume_db, target_db, 26.0 * delta)
+		if lp.playing and lp.volume_db <= -79.0 and want <= 0.01:
+			lp.stop()
+
+## خطوة تتبع السطح: عشب، خشب، حجر، ماء
+func play_surface_step(surface: String, running: bool) -> void:
+	var n := _rng.randi_range(1, 2)
+	var key := "step_%s_%d" % [surface, n]
+	if not SFX.has(key):
+		play_footstep(running)
+		return
+	play(key, _rng.randf_range(0.93, 1.09) * (1.07 if running else 1.0),
+		-3.0 if running else -7.0)
+
 func _exit_tree() -> void:
 	# تحرير المخزون عند الخروج وإلا بقيت موارد مستخدَمة ونبّه المحرك
 	stop_all()
+	for key in _layers:
+		var lp: AudioStreamPlayer = _layers[key]
+		lp.stop()
+		lp.stream = null
 	for p in _voices:
 		p.stop()
 		p.stream = null
