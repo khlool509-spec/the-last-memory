@@ -84,7 +84,7 @@ const PRESETS := {
 		"foliage_tint": Color(0.82, 0.74, 0.70),
 		"sun_disc": 7.0, "sun_size": 0.0024, "sun_glow": 4.0, "horizon_sharp": 5.0, "clouds": 0.62,
 		"cloud_color": Color(1.0, 0.741, 0.533), "cloud_shadow": Color(0.306, 0.251, 0.290),
-		"volumetric": 0.028,
+		"volumetric": 0.028, "vol_length": 180.0,
 		"vol_albedo": Color(1.0, 0.839, 0.714),
 		"vol_emission": Color(0.192, 0.133, 0.102),
 	},
@@ -111,7 +111,7 @@ const PRESETS := {
 		"foliage_tint": Color(0.40, 0.46, 0.60),
 		"sun_disc": 2.4, "sun_size": 0.0030, "sun_glow": 1.2, "horizon_sharp": 2.0, "clouds": 0.34,
 		"cloud_color": Color(0.455, 0.506, 0.600), "cloud_shadow": Color(0.098, 0.114, 0.165),
-		"volumetric": 0.038,
+		"volumetric": 0.038, "vol_length": 160.0,
 		"vol_albedo": Color(0.741, 0.824, 1.0),
 		"vol_emission": Color(0.035, 0.047, 0.078),
 	},
@@ -133,7 +133,11 @@ static func apply(env: Environment, sun: DirectionalLight3D, key: String, bright
 		var sm := env.sky.sky_material as ShaderMaterial
 		sm.set_shader_parameter("top_color", p["sky_top"])
 		sm.set_shader_parameter("horizon_color", p["sky_horizon"])
-		sm.set_shader_parameter("ground_color", p["ground_bottom"])
+		# لون ما تحت الأفق = لون الضباب نفسه. العالم 400 متراً،
+		# فالكاميرا ترى طرفه؛ وبلون مختلف يظهر الطرف شريحة رمادية
+		# عبر المشهد. بمطابقة الضباب تذوب الأرض البعيدة في السماء.
+		var horizon_fog: Color = p["fog_color"]
+		sm.set_shader_parameter("ground_color", horizon_fog.darkened(0.06))
 		sm.set_shader_parameter("sun_color", p["sun_color"])
 		sm.set_shader_parameter("sun_energy", float(p.get("sun_disc", 7.0)))
 		sm.set_shader_parameter("sun_size", float(p.get("sun_size", 0.0016)))
@@ -159,14 +163,18 @@ static func apply(env: Environment, sun: DirectionalLight3D, key: String, bright
 
 	# الضباب الحجمي: هو مصدر أعمدة الضوء بين الأشجار. غير مدعوم في
 	# مصيّر الجوال، ومتاح هنا لأن المشروع انتقل إلى Forward+.
-	env.volumetric_fog_enabled = true
-	env.volumetric_fog_density = float(p.get("volumetric", 0.03))
+	# طول الضباب الحجمي محدود (صندوق أمام الكاميرا)، فعند طرفه يظهر
+	# جدار رمادي أفقي عبر المشهد. في النهار إسهامه لا يُذكر وثمنه
+	# هذا الجدار، فيُطفأ؛ ويبقى في الغروب والليل حيث يصنع الجوّ فعلاً.
+	var vol := float(p.get("volumetric", 0.03))
+	env.volumetric_fog_enabled = vol > 0.004
+	env.volumetric_fog_density = vol
 	env.volumetric_fog_albedo = p.get("vol_albedo", Color.WHITE)
 	env.volumetric_fog_emission = p.get("vol_emission", Color.BLACK)
 	env.volumetric_fog_emission_energy = 1.0
 	env.volumetric_fog_gi_inject = 0.6
 	env.volumetric_fog_anisotropy = 0.35
-	env.volumetric_fog_length = 128.0
+	env.volumetric_fog_length = float(p.get("vol_length", 128.0))
 	env.volumetric_fog_detail_spread = 2.0
 
 	if sun:

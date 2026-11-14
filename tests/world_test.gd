@@ -105,6 +105,48 @@ func _test_structure() -> void:
 		flipped == 0, "%d مثلثاً مقلوباً — الأرض ستختفي" % flipped)
 
 func _test_data_integrity() -> void:
+	print("\n[خامات PBR الخارجية]")
+	# لا يكفي أن تُنزَّل الملفات: يجب أن تُحمَّل فعلاً وتُربَط بالشادر.
+	# هذا الاختبار يفشل إذا فُقد ملف أو لم يُستورد أو لم يُمرَّر.
+	var man_path := "res://assets/textures/pbr/MANIFEST.json"
+	var man_ok := FileAccess.file_exists(man_path)
+	_true("بيان المصادر موجود", man_ok, man_path)
+	if man_ok:
+		var raw := FileAccess.get_file_as_string(man_path)
+		var man: Dictionary = JSON.parse_string(raw)
+		var missing := 0
+		var n_files := 0
+		for aid in man:
+			var e: Dictionary = man[aid]
+			for k in (e["files"] as Dictionary):
+				n_files += 1
+				var fp: String = "res://" + str((e["files"] as Dictionary)[k]["path"])
+				if not ResourceLoader.exists(fp):
+					missing += 1
+			_true("ترخيص %s معلوم" % aid, str(e.get("license", "")) == "CC0 1.0",
+				str(e.get("license", "(فارغ)")))
+		_true("كل ملفات البيان مستوردة (%d)" % n_files, missing == 0,
+			"%d ملفاً مفقوداً أو غير مستورد" % missing)
+
+	var gm := WorldMaterials.ground()
+	_true("خامة الأرض شادر", gm is ShaderMaterial)
+	var bound := 0
+	var unbound := PackedStringArray()
+	for pname in ["a_diff", "a_norm", "a_arm", "b_diff", "b_norm", "b_arm",
+			"macro_diff", "rock_diff", "rock_norm", "rock_arm"]:
+		var tex = gm.get_shader_parameter(pname)
+		if tex is Texture2D and (tex as Texture2D).get_width() >= 1024:
+			bound += 1
+		else:
+			unbound.append(pname)
+	_true("خرائط الأرض مربوطة بدقة ≥1024 (%d/10)" % bound, bound == 10,
+		"غير مربوط: " + ", ".join(unbound))
+
+	var wm := WorldMaterials.water()
+	_true("خامة الماء شادر", wm is ShaderMaterial)
+	_true("خريطة تموّج الماء مربوطة",
+		wm.get_shader_parameter("ripple_tex") is Texture2D)
+
 	print("\n[سلامة البيانات]")
 	var d := world.data
 	var inst := 0

@@ -248,22 +248,48 @@ func _build_water() -> void:
 			smooth.append(_catmull(p0, p1, p2, p3, t))
 	smooth.append(pts[pts.size() - 1])
 
+	# عموديّ المفصل: عمودي كل نقطة هو متوسط عموديّ الضلعين المجاورين.
+	# بعمودي ضلع واحد تنفرج الحافّة الخارجية عند المنعطفات فتخرج من
+	# المجرى المنحوت، فتبرز التضاريس خلال اللوح بأسافين مثلثة.
+	var norms := PackedVector2Array()
+	var widths := PackedFloat32Array()
+	var lim := WorldProfile.RIVER_HALF_WIDTH - 0.45
+	var n_pts := smooth.size()
+	for i in n_pts:
+		var prev: Vector2 = smooth[maxi(i - 1, 0)]
+		var next: Vector2 = smooth[mini(i + 1, n_pts - 1)]
+		var d_in := (smooth[i] - prev)
+		var d_out := (next - smooth[i])
+		if d_in.length() < 0.001:
+			d_in = d_out
+		if d_out.length() < 0.001:
+			d_out = d_in
+		var nn := (d_in.normalized().orthogonal() + d_out.normalized().orthogonal())
+		if nn.length() < 0.001:
+			nn = d_out.normalized().orthogonal()
+		norms.append(nn.normalized())
+		# انعطاف حادّ ⇒ عرض أقل، وإلا تجاوزت الحافّة الخارجية المجرى
+		var turn := absf(d_in.normalized().angle_to(d_out.normalized()))
+		var narrow := clampf(1.0 - turn * 1.15, 0.52, 1.0)
+		var f := float(i) / float(n_pts - 1)
+		widths.append(minf(lerpf(3.6, 4.8, f), lim) * narrow)
+
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var y := data.water_level
-	for i in smooth.size() - 1:
+	for i in n_pts - 1:
 		var a := smooth[i]
 		var b := smooth[i + 1]
-		var dir := (b - a).normalized()
-		var nrm := dir.orthogonal()
-		var f0 := float(i) / float(smooth.size() - 1)
-		var f1 := float(i + 1) / float(smooth.size() - 1)
-		var w0 := lerpf(4.0, 7.2, f0)
-		var w1 := lerpf(4.0, 7.2, f1)
-		var a0 := Vector3(a.x - nrm.x * w0, y, a.y - nrm.y * w0)
-		var a1 := Vector3(a.x + nrm.x * w0, y, a.y + nrm.y * w0)
-		var b0 := Vector3(b.x - nrm.x * w1, y, b.y - nrm.y * w1)
-		var b1 := Vector3(b.x + nrm.x * w1, y, b.y + nrm.y * w1)
+		var na := norms[i]
+		var nb := norms[i + 1]
+		var f0 := float(i) / float(n_pts - 1)
+		var f1 := float(i + 1) / float(n_pts - 1)
+		var w0 := widths[i]
+		var w1 := widths[i + 1]
+		var a0 := Vector3(a.x - na.x * w0, y, a.y - na.y * w0)
+		var a1 := Vector3(a.x + na.x * w0, y, a.y + na.y * w0)
+		var b0 := Vector3(b.x - nb.x * w1, y, b.y - nb.y * w1)
+		var b1 := Vector3(b.x + nb.x * w1, y, b.y + nb.y * w1)
 		_wquad(st, a0, a1, b1, b0, f0, f1)
 	st.generate_normals()
 	st.generate_tangents()

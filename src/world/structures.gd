@@ -326,14 +326,14 @@ static func watchman_hut(world: WorldRenderer, center: Vector3, face: float) -> 
 	wall_with_window(root, w, h, t, Vector3(0, 0.12, -d * 0.5), 0.0, timber, 1.0, 0.85, 1.05)
 	plain_wall(root, d, h, t, Vector3(-w * 0.5, 0.12, 0), PI * 0.5, timber)
 	wall_with_window(root, d, h, t, Vector3(w * 0.5, 0.12, 0), PI * 0.5, timber, 0.9, 0.8, 1.1)
-	gable_roof(root, w, d, h + 0.12, 1.1, WorldMaterials.plain(ROOF_COL, 0.96))
+	gable_roof(root, w, d, h + 0.12, 1.1, WorldMaterials.roof(ROOF_COL))
 
 	# شرفة أمامية على عمودين
 	box(root, Vector3(w + 0.4, 0.12, 1.5), Vector3(0, 0.1, d * 0.5 + 0.75), dark)
 	for sx in [-w * 0.42, w * 0.42]:
 		box(root, Vector3(0.16, 2.2, 0.16), Vector3(sx, 1.2, d * 0.5 + 1.3), dark)
 	box(root, Vector3(w + 0.4, 0.16, 1.7), Vector3(0, 2.3, d * 0.5 + 0.8),
-		WorldMaterials.plain(ROOF_COL.darkened(0.1), 0.96), false)
+		WorldMaterials.roof(ROOF_COL.darkened(0.1)), false)
 
 	# الداخل
 	bed(root, Vector3(-1.2, 0.12, -0.9), PI * 0.5)
@@ -366,7 +366,7 @@ static func old_house(world: WorldRenderer, center: Vector3, face: float) -> Nod
 	wall_with_window(root, d, h, t, Vector3(w * 0.5, 0.14, 0), PI * 0.5, stone_m, 1.1, 1.0, 1.2)
 	# جدار داخلي يقسم المنزل غرفتين، فيه فتحة مرور
 	wall_with_door(root, d - t, h, 0.18, Vector3(1.0, 0.14, 0), PI * 0.5, timber, 1.0, 2.1, 1.3)
-	gable_roof(root, w, d, h + 0.14, 1.6, WorldMaterials.plain(ROOF_COL.darkened(0.08), 0.96))
+	gable_roof(root, w, d, h + 0.14, 1.6, WorldMaterials.roof(ROOF_COL.darkened(0.08)))
 
 	# مدخنة حجرية
 	box(root, Vector3(0.9, 2.6, 0.9), Vector3(-w * 0.32, h + 1.0, -d * 0.22), stone_m)
@@ -403,7 +403,7 @@ static func storehouse(world: WorldRenderer, center: Vector3, face: float) -> No
 	plain_wall(root, w, h, t, Vector3(0, 0.12, -d * 0.5), 0.0, timber)
 	wall_with_window(root, d, h, t, Vector3(-w * 0.5, 0.12, 0), PI * 0.5, timber, 0.8, 0.6, 1.5)
 	plain_wall(root, d, h, t, Vector3(w * 0.5, 0.12, 0), PI * 0.5, timber)
-	gable_roof(root, w, d, h + 0.12, 0.7, WorldMaterials.plain(ROOF_COL.lightened(0.04), 0.96), 0.5)
+	gable_roof(root, w, d, h + 0.12, 0.7, WorldMaterials.roof(ROOF_COL.lightened(0.04)), 0.5)
 
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7741

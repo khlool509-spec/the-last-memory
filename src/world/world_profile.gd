@@ -289,7 +289,9 @@ func _carve_river(x: float, z: float, h: float) -> float:
 	# 2) المجرى
 	if d <= RIVER_HALF_WIDTH:
 		var t := d / RIVER_HALF_WIDTH
-		return minf(out, bed + (t * t) * 1.4)
+		# الارتفاع عند الحافّة يبقى تحت سطح الماء على طول المجرى:
+		# بـ1.4 م كان القاع يعلو السطح أعلى النهر فتظهر التضاريس خلاله.
+		return minf(out, bed + (t * t) * 0.85)
 
 	# 3) الضفة بين المجرى والوادي
 	var bt := (d - RIVER_HALF_WIDTH) / (BANK_WIDTH - RIVER_HALF_WIDTH)

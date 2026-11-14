@@ -50,7 +50,8 @@ void sky() {
 	float t = pow(clamp(up, 0.0, 1.0), 1.0 / horizon_sharp);
 	vec3 col = mix(horizon_color, top_color, t);
 	// تحت الأفق: لون الأرض البعيدة
-	col = mix(col, ground_color, smoothstep(0.0, -0.12, up));
+	// انتقال عريض: الحافة الضيقة كانت تُرى حدّاً حادّاً عند الأفق
+	col = mix(col, ground_color, smoothstep(0.01, -0.30, up));
 
 	// الشمس: قرص حادّ داخل هالة واسعة
 	float sd = dot(dir, LIGHT0_DIRECTION);
