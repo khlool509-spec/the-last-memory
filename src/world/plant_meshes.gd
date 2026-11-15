@@ -464,6 +464,7 @@ static func build(species: String, rng: RandomNumberGenerator, detail: float = 1
 		"fern": return fern(rng)
 		"grass": return grass_tuft(rng)
 		"rock_s": return rock(rng, false)
+		"rock_xl": return rock(rng, true)
 		"rock_l": return rock(rng, true)
 		"log": return log_mesh(rng)
 		"branch": return branch(rng)

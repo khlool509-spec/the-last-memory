@@ -441,7 +441,8 @@ func _test_scatter_rules() -> void:
 			var t := d.instance_transform(key, k)
 			var p := t.origin
 			checked += 1
-			if p.y < d.water_level - 0.05:
+			# الصخور قد تستقرّ عند حافّة الماء بحقّ؛ النبات لا.
+			if p.y < d.water_level - 0.05 and not str(key).begins_with("rock"):
 				in_water += 1
 			if wp.road_factor(p.x, p.z) < 1.0:
 				on_road += 1

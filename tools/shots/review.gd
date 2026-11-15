@@ -45,6 +45,11 @@ func _ready() -> void:
 		{"name": "C_sky_horizon",
 		 "from": _eye(w, p_cross.x, p_cross.z, 2.2),
 		 "to": _eye(w, p_cross.x + 46, p_cross.z + 47, 30.0), "fov": 74.0},
+		# هـ: الأرض بزاوية زاحفة من ارتفاع القدم — الاختبار الحقيقي
+		# لإزاحة المنظور: العمق لا يُرى إلا في الزوايا المائلة.
+		{"name": "E_ground_grazing",
+		 "from": _eye(w, p_cross.x + 1.2, p_cross.z + 2.0, 0.45),
+		 "to": _eye(w, p_cross.x + 9.0, p_cross.z + 11.0, 0.30), "fov": 50.0},
 		# د: الإضاءة — ظلال واستجابة الخامات والإضاءة المحيطة
 		{"name": "D_lighting_shadows",
 		 "from": _eye(w, p_house.x - 13, p_house.z - 11, 3.4),

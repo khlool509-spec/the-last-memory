@@ -16,7 +16,7 @@ WANT = {                      # المعرّف: (الخرائط، الدقة)
     "aerial_rocks_02":     (["Diffuse", "nor_gl", "arm"], "2k"),
     "aerial_grass_rock":   (["Diffuse", "nor_gl", "arm"], "2k"),
     "leafy_grass":         (["Diffuse", "nor_gl", "arm"], "2k"),
-    "forrest_ground_01":   (["Diffuse", "nor_gl", "arm"], "2k"),
+    "forrest_ground_01":   (["Diffuse", "nor_gl", "arm", "Displacement"], "2k"),
     "rocky_terrain_02":    (["Diffuse", "nor_gl", "arm"], "2k"),
     "weathered_plank_siding": (["Diffuse", "nor_gl", "arm"], "2k"),
     "weathered_planks":    (["Diffuse", "nor_gl", "arm"], "2k"),
@@ -25,11 +25,11 @@ WANT = {                      # المعرّف: (الخرائط، الدقة)
     "roof_07":             (["Diffuse", "nor_gl", "arm"], "2k"),
     "beam_wall_01":        (["Diffuse", "nor_gl", "arm"], "2k"),
     "coral_stone_wall":    (["Diffuse", "nor_gl", "arm"], "2k"),
-    "forest_floor":        (["Diffuse", "nor_gl", "arm"], "2k"),
-    "mud_forest":          (["Diffuse", "nor_gl", "arm"], "2k"),
+    "forest_floor":        (["Diffuse", "nor_gl", "arm", "Displacement"], "2k"),
+    "mud_forest":          (["Diffuse", "nor_gl", "arm", "Displacement"], "2k"),
     "rocky_terrain":       (["Diffuse", "nor_gl", "arm"], "2k"),
 }
-SUFFIX = {"Diffuse": "diff", "nor_gl": "nor", "arm": "arm"}
+SUFFIX = {"Diffuse": "diff", "nor_gl": "nor", "arm": "arm", "Displacement": "disp"}
 
 
 def get(url: str) -> bytes:

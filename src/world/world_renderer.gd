@@ -10,7 +10,7 @@ const RANGE := {
 	"pine": 128.0, "spruce": 128.0, "oak": 120.0, "birch": 120.0,
 	"willow": 105.0, "dead": 112.0,
 	"bush": 52.0, "fern": 38.0, "grass": 28.0,
-	"rock_s": 85.0, "rock_l": 130.0,
+	"rock_s": 85.0, "rock_l": 170.0, "rock_xl": 320.0,
 	"log": 60.0, "branch": 42.0, "root": 40.0, "mushroom": 26.0,
 	"cobble": 50.0,
 }
@@ -174,7 +174,7 @@ func _add_batch(species: String, chunk_idx: int, buf: PackedFloat32Array, count:
 	# التلاشي المتبادل يمنع القفزة المفاجئة بين مستويين
 	mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 	mmi.cast_shadow = (GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-		if (species in TREES or species == "rock_l") and lod == 0
+		if (species in TREES or species == "rock_l" or species == "rock_xl") and lod == 0
 		else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
 	scatter_root.add_child(mmi)
 

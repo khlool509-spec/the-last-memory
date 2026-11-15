@@ -44,12 +44,12 @@ const PRESETS := {
 		"sun_energy": 1.48,
 		"ambient_color": Color(0.396, 0.467, 0.569),
 		"ambient_energy": 0.90,
-		"fog_color": Color(0.596, 0.655, 0.714),
-		"fog_near": 0.00030,      # كثافة الضباب على المرتفعات
-		"fog_far": 0.00090,       # في بطن الوادي
+		"fog_color": Color(0.639, 0.698, 0.769),
+		"fog_near": 0.00016,      # كثافة الضباب على المرتفعات
+		"fog_far": 0.00062,       # في بطن الوادي
 		"fog_begin": 110.0,
 		"fog_end": 460.0,
-		"sky_affect": 0.08,
+		"sky_affect": 0.02,
 		"exposure": 0.80,
 		"saturation": 1.02,
 		"lamp_scale": 0.10,       # الفوانيس تخفت في وضح النهار

@@ -51,6 +51,8 @@ static func ground() -> ShaderMaterial:
 	m.set_shader_parameter("b_diff", _pbr("forrest_ground_01_diff_2k.jpg"))
 	m.set_shader_parameter("b_norm", _pbr("forrest_ground_01_nor_2k.jpg"))
 	m.set_shader_parameter("b_arm", _pbr("forrest_ground_01_arm_2k.jpg"))
+	m.set_shader_parameter("a_disp", _pbr("mud_forest_disp_2k.jpg"))
+	m.set_shader_parameter("b_disp", _pbr("forrest_ground_01_disp_2k.jpg"))
 	# ج: فرش أوراق ساقطة (forest_floor، بلاطة 2.14 م)
 	m.set_shader_parameter("c_diff", _pbr("forest_floor_diff_2k.jpg"))
 	m.set_shader_parameter("c_norm", _pbr("forest_floor_nor_2k.jpg"))
@@ -62,6 +64,8 @@ static func ground() -> ShaderMaterial:
 	m.set_shader_parameter("rock_diff", _pbr("aerial_rocks_02_diff_2k.jpg"))
 	m.set_shader_parameter("rock_norm", _pbr("aerial_rocks_02_nor_2k.jpg"))
 	m.set_shader_parameter("rock_arm", _pbr("aerial_rocks_02_arm_2k.jpg"))
+	if OS.get_environment("NO_POM") == "1":
+		m.set_shader_parameter("pom_enable", 0.0)
 	if OS.get_environment("NO_VCOL") == "1":
 		m.set_shader_parameter("use_vcol", 0.0)
 	if OS.get_environment("GROUND_DBG") != "":

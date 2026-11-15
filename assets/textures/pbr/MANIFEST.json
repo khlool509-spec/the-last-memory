@@ -242,6 +242,13 @@
         "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/forrest_ground_01/forrest_ground_01_arm_2k.jpg",
         "md5": "bb5d791e2697b0b4b8703963c42a70d4",
         "bytes": 1160819
+      },
+      "disp": {
+        "file": "forrest_ground_01_disp_2k.jpg",
+        "path": "assets/textures/pbr/forrest_ground_01_disp_2k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/forrest_ground_01/forrest_ground_01_disp_2k.jpg",
+        "md5": "50750c4535f53817d141412e819f7aea",
+        "bytes": 1036491
       }
     },
     "in_use": true
@@ -612,6 +619,13 @@
         "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/forest_floor/forest_floor_arm_2k.jpg",
         "md5": "00a1d0081bfa9a574d5973106c94c01e",
         "bytes": 3926636
+      },
+      "disp": {
+        "file": "forest_floor_disp_2k.jpg",
+        "path": "assets/textures/pbr/forest_floor_disp_2k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/forest_floor/forest_floor_disp_2k.jpg",
+        "md5": "2882f21e8b3f3aad8b89a1ec26014e25",
+        "bytes": 1935809
       }
     },
     "in_use": true
@@ -653,6 +667,13 @@
         "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/mud_forest/mud_forest_arm_2k.jpg",
         "md5": "5e46adb654cda4ca023f1e983a363a71",
         "bytes": 3326167
+      },
+      "disp": {
+        "file": "mud_forest_disp_2k.jpg",
+        "path": "assets/textures/pbr/mud_forest_disp_2k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/mud_forest/mud_forest_disp_2k.jpg",
+        "md5": "b90acf7295a2de413339fff7e34cbaf9",
+        "bytes": 1623075
       }
     },
     "in_use": true

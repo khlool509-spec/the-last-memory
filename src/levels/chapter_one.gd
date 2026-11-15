@@ -58,10 +58,26 @@ func _build_environment() -> void:
 	env.fog_mode = Environment.FOG_MODE_DEPTH
 	env.fog_light_energy = 1.0
 	env.fog_density = 0.010
-	env.fog_aerial_perspective = 0.35
+	env.fog_aerial_perspective = 0.55
+	# ضباب بارتفاع: الضباب العمقي وحده يملأ السماء القريبة من الأفق
+	# بحزام أبيض لأنه يطال كل بُعد بالتساوي. بالارتفاع يستقرّ في بطن
+	# الوادي ويخفّ فوقه، فيصير منظوراً جوّياً لا جداراً.
+	# القيم الأولى (6.0 / 0.055) أغرقت بطن الوادي كلّه في بياض:
+	# أرض النهر تحت 6 أمتار فدخلت كلها في الطبقة الكثيفة.
+	# الارتفاع الآن عند منسوب الماء تقريباً والكثافة عُشر ما كانت.
+	env.fog_height = 1.5
+	env.fog_height_density = 0.006
 
 	# حجب محيطي: يُعتم الشقوق وملتقى الجدار بالأرض. بدونه يطفو كل
 	# جسم فوق الأرض بلا تماسّ، وهو أظهر فارق عن المرجع السينمائي.
+	# تقييم الإضاءة غير المباشرة: SDFGI يُفعَّل بمفتاح بيئة للقياس
+	# وحده. القرار يُبنى على الكلفة المقيسة لا على الاسم.
+	if OS.get_environment("GI_SDFGI") == "1":
+		env.sdfgi_enabled = true
+		env.sdfgi_cascades = 4
+		env.sdfgi_min_cell_size = 0.25
+		env.sdfgi_use_occlusion = true
+		env.sdfgi_energy = 1.0
 	env.ssao_enabled = true
 	env.ssao_radius = 1.6
 	env.ssao_intensity = 2.4

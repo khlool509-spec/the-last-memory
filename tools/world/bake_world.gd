@@ -10,12 +10,20 @@ const HEIGHT_STEP := 2.0
 
 var wp: WorldProfile
 var bio: Biome
+## حقل تكتّل الصخور: التوزيع المنتظم يُقرأ صناعياً مهما جُرجر عشوائياً.
+## الصخور في الطبيعة تتجمّع عند أقدام النتوءات وفي مجاري الركام.
+var rock_clump: FastNoiseLite
 var rng := RandomNumberGenerator.new()
 
 func _initialize() -> void:
 	var t0 := Time.get_ticks_msec()
 	rng.seed = WorldProfile.SEED
 	wp = WorldProfile.new()
+	rock_clump = FastNoiseLite.new()
+	rock_clump.seed = WorldProfile.SEED + 909
+	rock_clump.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	rock_clump.frequency = 0.0135
+	rock_clump.fractal_octaves = 2
 	bio = Biome.new(wp)
 
 	var data := WorldData.new()
@@ -128,7 +136,8 @@ const LAYERS := [
 	{"group": "fern",   "cell": 2.6,  "slope_max": 0.50, "jitter": 0.97},
 	{"group": "grass",  "cell": 1.9,  "slope_max": 0.58, "jitter": 1.0},
 	{"group": "rock_s", "cell": 7.5,  "slope_max": 0.85, "jitter": 0.9},
-	{"group": "rock_l", "cell": 23.0, "slope_max": 0.85, "jitter": 0.9},
+	{"group": "rock_l", "cell": 17.0, "slope_max": 0.90, "jitter": 0.9},
+	{"group": "rock_xl", "cell": 41.0, "slope_max": 0.72, "jitter": 0.95},
 	{"group": "log",    "cell": 18.0, "slope_max": 0.30, "jitter": 0.9},
 	{"group": "branch", "cell": 9.5, "slope_max": 0.40, "jitter": 0.95},
 	{"group": "root",   "cell": 19.0, "slope_max": 0.35, "jitter": 0.9},
@@ -175,8 +184,15 @@ func _try_place(data: WorldData, group: String, x: float, z: float, slope_max: f
 			chance = bio.undergrowth_density(kind) * 0.52
 		"grass":
 			chance = bio.undergrowth_density(kind) * 0.55
-		"rock_s", "rock_l":
-			chance = 0.18 + sl * 0.95 + (0.5 if kind == Biome.Kind.ROCKY else 0.0)
+		"rock_s", "rock_l", "rock_xl":
+			# التكتّل: 0 في المروج المكشوفة، 1 في أحزمة الركام
+			var cl := clampf(rock_clump.get_noise_2d(x, z) * 1.35 + 0.42, 0.0, 1.0)
+			cl = cl * cl
+			chance = (0.10 + sl * 1.15 + (0.45 if kind == Biome.Kind.ROCKY else 0.0))
+			chance *= 0.22 + cl * 1.55
+			if group == "rock_xl":
+				# الجلاميد أندر وتلزمها أرض تحملها
+				chance *= 0.55 * clampf(1.25 - sl, 0.0, 1.0)
 		"log", "branch", "root":
 			chance = 0.30 + (0.42 if kind == Biome.Kind.DEEP or kind == Biome.Kind.FOREST else 0.0)
 		"mushroom":
@@ -219,8 +235,9 @@ func _instance_transform(group: String, species: String, x: float, y: float, z: 
 		"bush": scale_v = rng.randf_range(0.8, 1.9)
 		"fern": scale_v = rng.randf_range(0.7, 1.5)
 		"grass": scale_v = rng.randf_range(0.7, 1.6)
-		"rock_s": scale_v = rng.randf_range(0.5, 1.5)
-		"rock_l": scale_v = rng.randf_range(1.8, 4.6)
+		"rock_s": scale_v = rng.randf_range(0.6, 1.8)
+		"rock_l": scale_v = rng.randf_range(2.6, 6.2)
+		"rock_xl": scale_v = rng.randf_range(6.5, 13.0)
 		"log": scale_v = rng.randf_range(1.0, 2.4)
 		"branch": scale_v = rng.randf_range(0.7, 1.5)
 		"root": scale_v = rng.randf_range(0.8, 1.7)
@@ -241,11 +258,23 @@ func _instance_transform(group: String, species: String, x: float, y: float, z: 
 		var la := rng.randf_range(0.0, TAU)
 		b = Basis(Vector3(cos(la), 0, sin(la)), lean * rng.randf_range(0.3, 1.0))
 	b = b.rotated(Vector3.UP, rng.randf_range(0.0, TAU))
+	# الصخور تُمال عشوائياً حول محورين: صخرة قائمة على عموديّ الأرض
+	# تماماً تُقرأ موضوعة باليد لا مستقرّة منذ دهر.
+	if group.begins_with("rock"):
+		var t1 := rng.randf_range(0.0, TAU)
+		b = b.rotated(Vector3(cos(t1), 0.0, sin(t1)), rng.randf_range(-0.42, 0.42))
 	# تفاوت أفقي طفيف فلا تبدو النسخ متطابقة
 	var sx := scale_v * rng.randf_range(0.9, 1.1)
-	var sz := scale_v * rng.randf_range(0.9, 1.1)
-	b = b.scaled(Vector3(sx, scale_v, sz))
+	var sz := scale_v * rng.randf_range(0.82, 1.18)
+	b = b.scaled(Vector3(sx, scale_v * rng.randf_range(0.72, 1.0), sz))
 	var sink := 0.0
 	if group == "tree":
 		sink = 0.25 * scale_v * 0.05
+	elif group.begins_with("rock"):
+		# الغرس: الصخرة تدفن جزءاً منها في التربة. بلا ذلك تطفو
+		# فوق الأرض بحدّ حادّ ويظهر خطّ تماسّ صناعي.
+		sink = scale_v * rng.randf_range(0.18, 0.34)
+		# لكن لا ينزل أصلها تحت سطح الماء: الجلاميد الكبيرة كان
+		# غرسها يدفنها في المجرى فتُحسَب «داخل الماء».
+		sink = minf(sink, maxf(y - (WorldProfile.WATER_LEVEL + 0.10), 0.0))
 	return Transform3D(b, Vector3(x, y - sink, z))
