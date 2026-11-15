@@ -10,6 +10,14 @@ signal jump_pressed()
 signal interact_pressed()
 signal inventory_pressed()
 signal pause_pressed()
+signal fire_changed(active: bool)
+signal aim_changed(active: bool)
+signal crouch_pressed()
+signal prone_pressed()
+signal reload_pressed()
+signal autorun_toggled(active: bool)
+signal swim_vertical(dir: int)          # ‎+1 صعود، ‎-1 غوص
+signal weapon_selected(index: int)
 
 var joystick: TouchJoystick
 var look_area: TouchLookArea
@@ -25,6 +33,20 @@ var _fps: Label
 var _health_fill: ColorRect
 var _stamina_fill: ColorRect
 var _root: Control
+var btn_fire: ActionButton
+var btn_aim: ActionButton
+var btn_crouch: ActionButton
+var btn_prone: ActionButton
+var btn_reload: ActionButton
+var btn_autorun: ActionButton
+var btn_swim_up: ActionButton
+var btn_swim_down: ActionButton
+var compass: CompassStrip
+var minimap: MiniMap
+var coords: CoordBar
+var weapons: WeaponSlots
+var _swim_box: Control
+var _autorun_on := false
 
 func _ready() -> void:
 	layer = 10
@@ -39,6 +61,11 @@ func _ready() -> void:
 	_build_look_area()
 	_build_joystick()
 	_build_actions()
+	_build_combat()
+	_build_compass()
+	_build_minimap()
+	_build_coords()
+	_build_weapons()
 	_build_status()
 	_build_objective()
 	_build_prompt()
@@ -115,6 +142,182 @@ func _build_actions() -> void:
 	btn_inventory.position = Vector2(-96, 86)
 	btn_inventory.tapped.connect(func(): inventory_pressed.emit())
 	holder.add_child(btn_inventory)
+
+
+# ---------- عنقود القتال (ترتيب ببجي) ----------
+## الترتيب مأخوذ من مرجع اللاعب: الإطلاق كبير أسفل يمين تحت الإبهام،
+## والتصويب فوقه، وأوضاع الجسم (انبطاح/قرفصاء/قفز) عموداً يمينه،
+## والتعبئة بجواره. كل زر موصول بإشارة حقيقية لا شكل فارغ.
+func _build_combat() -> void:
+	var box := Control.new()
+	box.name = "Combat"
+	box.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.offset_left = -300
+	box.offset_top = -430
+	box.offset_right = -18
+	box.offset_bottom = -150
+	_root.add_child(box)
+
+	btn_fire = ActionButton.new()
+	btn_fire.glyph = "◎"
+	btn_fire.label_text = "إطلاق"
+	btn_fire.radius = 64.0
+	btn_fire.hold_mode = true
+	btn_fire.accent = Palette.BLOOD
+	btn_fire.position = Vector2(14, 150)
+	btn_fire.pressed_changed.connect(func(v): fire_changed.emit(v))
+	box.add_child(btn_fire)
+
+	btn_aim = ActionButton.new()
+	btn_aim.glyph = "⊕"
+	btn_aim.label_text = "تصويب"
+	btn_aim.radius = 46.0
+	btn_aim.hold_mode = true
+	btn_aim.accent = Palette.MOON_DIM
+	btn_aim.position = Vector2(42, 24)
+	btn_aim.pressed_changed.connect(func(v): aim_changed.emit(v))
+	box.add_child(btn_aim)
+
+	btn_reload = ActionButton.new()
+	btn_reload.glyph = "⟳"
+	btn_reload.label_text = "تعبئة"
+	btn_reload.radius = 42.0
+	btn_reload.accent = Palette.DUST
+	btn_reload.position = Vector2(-78, 150)
+	btn_reload.tapped.connect(func(): reload_pressed.emit())
+	box.add_child(btn_reload)
+
+	btn_crouch = ActionButton.new()
+	btn_crouch.glyph = "⌄"
+	btn_crouch.label_text = "قرفصاء"
+	btn_crouch.radius = 40.0
+	btn_crouch.position = Vector2(178, 96)
+	btn_crouch.tapped.connect(func(): crouch_pressed.emit())
+	box.add_child(btn_crouch)
+
+	btn_prone = ActionButton.new()
+	btn_prone.glyph = "▁"
+	btn_prone.label_text = "انبطاح"
+	btn_prone.radius = 40.0
+	btn_prone.position = Vector2(178, 10)
+	btn_prone.tapped.connect(func(): prone_pressed.emit())
+	box.add_child(btn_prone)
+
+	# الركض التلقائي: مفتاح لا ضغطة مستمرّة، كما في ببجي تماماً —
+	# يُفعَّل مرّة فيستمرّ حتى يُلمس ثانية أو يتوقّف اللاعب.
+	btn_autorun = ActionButton.new()
+	btn_autorun.glyph = "⇈"
+	btn_autorun.label_text = "ركض تلقائي"
+	btn_autorun.radius = 42.0
+	btn_autorun.accent = Palette.MOON_DIM
+	btn_autorun.position = Vector2(-86, 46)
+	btn_autorun.tapped.connect(_toggle_autorun)
+	box.add_child(btn_autorun)
+
+	# أزرار السباحة: تظهر فقط داخل الماء، كما يفعل ببجي
+	_swim_box = Control.new()
+	_swim_box.name = "Swim"
+	_swim_box.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
+	_swim_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_swim_box.offset_left = -130
+	_swim_box.offset_top = -110
+	_swim_box.offset_right = -14
+	_swim_box.offset_bottom = 110
+	_swim_box.visible = false
+	_root.add_child(_swim_box)
+
+	btn_swim_up = ActionButton.new()
+	btn_swim_up.glyph = "▲"
+	btn_swim_up.label_text = "أعلى"
+	btn_swim_up.radius = 44.0
+	btn_swim_up.hold_mode = true
+	btn_swim_up.position = Vector2(10, 4)
+	btn_swim_up.pressed_changed.connect(
+		func(v): swim_vertical.emit(1 if v else 0))
+	_swim_box.add_child(btn_swim_up)
+
+	btn_swim_down = ActionButton.new()
+	btn_swim_down.glyph = "▼"
+	btn_swim_down.label_text = "غوص"
+	btn_swim_down.radius = 44.0
+	btn_swim_down.hold_mode = true
+	btn_swim_down.position = Vector2(10, 118)
+	btn_swim_down.pressed_changed.connect(
+		func(v): swim_vertical.emit(-1 if v else 0))
+	_swim_box.add_child(btn_swim_down)
+
+func _toggle_autorun() -> void:
+	_autorun_on = not _autorun_on
+	btn_autorun.accent = Palette.BLOOD if _autorun_on else Palette.MOON_DIM
+	btn_autorun.queue_redraw()
+	autorun_toggled.emit(_autorun_on)
+
+## يُستدعى من اللاعب حين يدخل الماء أو يخرج منه
+func set_swimming(on: bool) -> void:
+	if _swim_box:
+		_swim_box.visible = on
+
+func set_autorun(on: bool) -> void:
+	if _autorun_on == on:
+		return
+	_autorun_on = on
+	if btn_autorun:
+		btn_autorun.accent = Palette.BLOOD if on else Palette.MOON_DIM
+		btn_autorun.queue_redraw()
+
+# ---------- البوصلة والخريطة والإحداثيات ----------
+func _build_compass() -> void:
+	compass = CompassStrip.new()
+	compass.name = "Compass"
+	compass.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	compass.offset_left = 230
+	compass.offset_right = -230
+	compass.offset_top = 6
+	compass.offset_bottom = 52
+	_root.add_child(compass)
+
+func _build_minimap() -> void:
+	minimap = MiniMap.new()
+	minimap.name = "MiniMap"
+	minimap.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	minimap.offset_left = -202
+	minimap.offset_top = 14
+	minimap.offset_right = -16
+	minimap.offset_bottom = 200
+	_root.add_child(minimap)
+
+func _build_coords() -> void:
+	coords = CoordBar.new()
+	coords.name = "Coords"
+	coords.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	coords.offset_left = 14
+	coords.offset_top = -30
+	coords.offset_right = 760
+	coords.offset_bottom = -4
+	_root.add_child(coords)
+
+func _build_weapons() -> void:
+	weapons = WeaponSlots.new()
+	weapons.name = "Weapons"
+	weapons.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	weapons.offset_left = -156
+	weapons.offset_right = 156
+	weapons.offset_top = -96
+	weapons.offset_bottom = -44
+	weapons.anchor_left = 0.5
+	weapons.anchor_right = 0.5
+	weapons.slot_selected.connect(func(i): weapon_selected.emit(i))
+	_root.add_child(weapons)
+
+## يُغذّيها اللاعب كل إطار: اتجاه، موقع، سرعة، حالة
+func feed(pos: Vector3, yaw_deg: float, speed: float, state: String) -> void:
+	if compass:
+		compass.set_heading(yaw_deg)
+	if minimap:
+		minimap.set_player(Vector2(pos.x, pos.z), deg_to_rad(yaw_deg))
+	if coords:
+		coords.set_state(pos, yaw_deg, speed, state)
 
 # ---------- الحالة ----------
 func _build_status() -> void:

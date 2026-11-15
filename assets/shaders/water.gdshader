@@ -23,10 +23,14 @@ uniform sampler2D ripple_tex : hint_normal, filter_linear_mipmap, repeat_enable;
 // COLOR.a = بُعد النقطة عن الضفة (0 عند الحافة، 1 في وسط المجرى).
 uniform float channel_depth : hint_range(0.2, 4.0) = 1.35;  // عمق الوسط بالأمتار
 
-uniform vec3 shallow_color : source_color = vec3(0.38, 0.58, 0.55);
-uniform vec3 deep_color : source_color = vec3(0.08, 0.22, 0.28);
+// قياس من مرجع ببجي: متوسط مساحة الماء خطّياً (0.168, 0.254, 0.262)
+// ومدى العيّنات من القريب إلى الأفق 0.147 → 0.319. أي أن ماء ببجي
+// شبه موحّد اللون: تدرّج العمق خفيف جداً، والتشبّع منخفض، والقيمة
+// فاتحة. نسبة القنوات ≈ 0.64 : 0.97 : 1.00
+uniform vec3 shallow_color : source_color = vec3(0.205, 0.292, 0.300);
+uniform vec3 deep_color : source_color = vec3(0.132, 0.212, 0.224);
 uniform vec3 foam_color : source_color = vec3(0.92, 0.95, 0.95);
-uniform vec3 bed_tint : source_color = vec3(0.46, 0.42, 0.33);  // حصى القاع
+uniform vec3 bed_tint : source_color = vec3(0.40, 0.40, 0.36);  // حصى القاع
 
 uniform float depth_fade = 2.2;
 uniform float shore_fade = 0.80;
@@ -45,11 +49,13 @@ uniform float wave_steep : hint_range(0.0, 1.0) = 0.80;
 uniform float ripple_scale = 1.4;
 uniform float ripple_fine = 0.42;
 uniform float ripple_strength : hint_range(0.0, 3.0) = 1.3;
-uniform float fresnel_power : hint_range(0.5, 8.0) = 5.2;
+uniform float fresnel_power : hint_range(0.5, 8.0) = 3.6;
 uniform float rough_calm : hint_range(0.0, 1.0) = 0.055;
 uniform float rough_churn : hint_range(0.0, 1.0) = 0.34;
 uniform float foam_depth = 0.95;     // أمتار يظهر فيها زبد الضحل
 uniform float refraction : hint_range(0.0, 0.3) = 0.055;
+uniform vec3 sky_color : source_color = vec3(0.47, 0.61, 0.74);
+uniform float reflect_amount : hint_range(0.0, 1.0) = 0.62;
 
 varying vec3 v_world;
 varying vec4 v_flow;
@@ -137,7 +143,10 @@ void fragment() {
 	float bed = texture(ripple_tex, buv).g * 0.5 + 0.5;
 	vec3 bed_col = bed_tint * (0.72 + 0.56 * bed);
 	vec3 absorb = mix(shallow_color, deep_color, dt);
-	vec3 col = mix(bed_col * absorb * 1.35, absorb, smoothstep(0.0, 0.75, dt));
+		// المرجع يُظهر القاع عبر غشاء موحّد لا تدرّجاً حادّاً، لذا الخلط
+	// يبدأ مبكراً وينتهي مبكراً: الماء يُقرأ كسطح واحد له عمق.
+	vec3 col = mix(bed_col * absorb * 1.15 + absorb * 0.45,
+		absorb, smoothstep(0.0, 0.55, dt));
 
 	float fres = pow(1.0 - clamp(dot(normalize(VIEW), NORMAL), 0.0, 1.0), fresnel_power);
 
@@ -148,15 +157,22 @@ void fragment() {
 	float shallow_f = 1.0 - smoothstep(0.0, foam_depth, water_depth);
 	float crest = smoothstep(0.35, 0.95, v_wave_n.y < 0.999 ? (1.0 - v_wave_n.y) * 42.0 : 0.0);
 	float churn_f = v_churn * (0.35 + 0.65 * (r_fine.y * 0.5 + 0.5));
-	float foam = clamp(shallow_f * 0.38 + churn_f * crest * 0.55, 0.0, 1.0);
+	float foam = clamp(shallow_f * 0.26 + churn_f * crest * 0.42, 0.0, 1.0);
 	// تلاشٍ تدريجي: الزبد لا يظهر ويختفي فجأة
 	foam *= 0.55 + 0.45 * (r_coarse.y * 0.5 + 0.5);
 
-	ALBEDO = mix(col, foam_color, foam);
+		// انعكاس السماء: لون السماء المحيط يُمزج حسب الفرينل. هذا ما
+	// يجعل الماء يعكس بوضوح من زاوية منخفضة ويبقى صافياً من فوق.
+	vec3 sky_ref = sky_color * (0.85 + 0.30 * r_coarse.y);
+	vec3 surf = mix(col, sky_ref, clamp(fres * reflect_amount, 0.0, 0.82));
+	ALBEDO = mix(surf, foam_color, foam);
 	NORMAL = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
-	ROUGHNESS = mix(mix(rough_calm, rough_churn, v_churn), 0.78, foam);
+	ROUGHNESS = mix(mix(rough_calm, rough_churn, v_churn), 0.72, foam) + fres * 0.10;
 	METALLIC = 0.0;
-	SPECULAR = mix(0.68, 0.28, foam);
+		// بريق مكبوح عمداً: المطلوب انعكاس يُرى لا وهج يؤذي النظر.
+	SPECULAR = mix(0.38, 0.20, foam);
+	// الخشونة ترتفع مع بُعد النظر فيتفتّت قرص الشمس بدل أن يتركّز
+	RIM = 0.18;
 	float shore = smoothstep(0.0, shore_fade, water_depth);
 	// قاعدة شفافية لا تهبط إلى الصفر داخل المجرى: الماء الضحل
 	// يبقى مرئياً كغشاء، ولا يختفي تاركاً القاع عارياً.

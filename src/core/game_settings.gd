@@ -38,6 +38,7 @@ const DEFAULTS := {
 	"gfx_texture_res": "1k",        # دقّة الخامات: 512 أو 1k (الأساس)
 	"gfx_auto_detected": false,     # هل اختار المحرّك المستوى لهذا الجهاز بعد؟
 	"gfx_show_fps": false,          # عدّاد الفريمات على الشاشة
+	"character_gender": "male",     # male أو female — يُختار قبل اللعب
 	"gfx_colorblind": "none",        # تصحيح حقيقي لا تلوين
 	"ui_safe_area": 0.0,             # إزاحة واجهة الشاشات غير القياسية
 }

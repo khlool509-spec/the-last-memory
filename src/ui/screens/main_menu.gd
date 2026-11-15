@@ -144,7 +144,7 @@ func _on_item_pressed(id: String) -> void:
 	match id:
 		"new_game":
 			SaveSystem.start_new_game()
-			_launch_game()
+			_choose_character()        # الاختيار قبل الدخول، كما طُلب
 		"continue":
 			SaveSystem.load_game()
 			_launch_game()
@@ -156,6 +156,18 @@ func _on_item_pressed(id: String) -> void:
 			Router.go_to("res://src/ui/screens/collectibles_menu.tscn")
 		"quit":
 			Router.quit_game()
+
+## شاشة اختيار الشخصية: تُركَّب فوق القائمة ثم تُحرَّر عند الدخول
+func _choose_character() -> void:
+	var cs := CharacterSelect.new()
+	cs.chosen.connect(func(_g: String) -> void:
+		cs.queue_free()
+		_launch_game())
+	cs.cancelled.connect(func() -> void: cs.queue_free())
+	var layer := CanvasLayer.new()
+	layer.layer = 40
+	layer.add_child(cs)
+	add_child(layer)
 
 ## يبدأ أول فصل مبني فعلياً؛ يسقط إلى ساحة الاختبار إن لم يوجد
 func _launch_game() -> void:

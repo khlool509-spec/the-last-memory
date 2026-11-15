@@ -54,6 +54,12 @@ func _build_environment() -> void:
 	sky.sky_material = sm
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+	# الملء المحيطي: تُرك على الافتراضي فسقطت الظلال سوداء تماماً.
+	# في الواقع لا يوجد ظل أسود تحت سماء مفتوحة — السماء نفسها مصدر
+	# ضوء يملأ ما تحجبه الشمس. هذا سبب البقع الداكنة التي صوّرها
+	# اللاعب: ليست عيباً في الظل بل غياب الضوء المرتد.
+	env.ambient_light_sky_contribution = 1.0
+	env.ambient_light_energy = 1.85
 
 	# ضباب عمقي: العمق البصري ومحدّد المدى معاً. الحجمي غير مدعوم هنا.
 	env.fog_enabled = true
@@ -113,17 +119,25 @@ func _build_environment() -> void:
 	_sun = DirectionalLight3D.new()
 	_sun.name = "KeyLight"
 	_sun.shadow_enabled = true
-	_sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
-	_sun.shadow_bias = 0.028
-	_sun.shadow_normal_bias = 1.0
+	# تقسيمان لا أربعة: أطلس 2048 على الجوال مقسوماً على أربعة يعطي
+	# 1024 لكل تقسيم، وهي دقّة تُنتج تشوّه ظل يظهر كبقع مثلثة داكنة.
+	# بتقسيمين يصير لكل واحد 1448، والفرق مرئي مباشرة.
+	_sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+	# انحياز أعلى: مع دقّة الجوال المنخفضة، الانحياز الصغير يُنتج
+	# «حَبّ الظل» — خطوطاً داكنة على أسطح مضاءة.
+	_sun.shadow_bias = 0.06
+	_sun.shadow_normal_bias = 2.4
+	# مدى الظل: الافتراضي 100 م يقطع الظل بخط مستقيم عبر الشاشة.
+	_sun.directional_shadow_max_distance = 165.0
+	_sun.directional_shadow_fade_start = 0.82
 	# الشمس قرص عرضه 0.53 درجة لا نقطة. بصفر كان كل ظل حادّاً كالسكّين
 	# مهما بَعُد؛ بالعرض الزاوي يتّسع شبه الظلّ مع المسافة كما في الواقع.
 	_sun.light_angular_distance = 0.55
 	_sun.shadow_blur = 1.0
 	# التقسيمات تُقرّب دقّة الظل من الكاميرا حيث تُرى الحافّة
-	_sun.directional_shadow_split_1 = 0.055
-	_sun.directional_shadow_split_2 = 0.14
-	_sun.directional_shadow_split_3 = 0.38
+	_sun.directional_shadow_split_1 = 0.11
+	_sun.directional_shadow_split_2 = 0.34
+	_sun.directional_shadow_split_3 = 0.60
 	_sun.directional_shadow_blend_splits = true
 	add_child(_sun)
 

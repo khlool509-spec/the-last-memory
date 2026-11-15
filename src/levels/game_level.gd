@@ -45,42 +45,14 @@ func _build_player() -> void:
 	player.position = spawn_point
 	player.rotation.y = deg_to_rad(spawn_yaw_deg)
 
-	var body := MeshInstance3D.new()
-	body.name = "Body"
-	var cap := CapsuleMesh.new()
-	cap.radius = 0.33
-	cap.height = 1.75
-	body.mesh = cap
-	body.material_override = ForestBuilder.mat(Color(0.173, 0.184, 0.212), 0.85)
-	body.position = Vector3(0, 0.875, 0)
-	player.add_child(body)
-
-	var head := MeshInstance3D.new()
-	head.name = "Head"
-	var hm := SphereMesh.new()
-	hm.radius = 0.19
-	hm.height = 0.38
-	hm.radial_segments = 10
-	hm.rings = 6
-	head.mesh = hm
-	head.material_override = ForestBuilder.mat(Color(0.251, 0.235, 0.216), 0.8)
-	head.position = Vector3(0, 1.72, 0)
-	player.add_child(head)
-
-	# وشاح أحمر: نفس لون هوية اللعبة، يميّز الشخصية في الظلام
-	var scarf := MeshInstance3D.new()
-	scarf.name = "Scarf"
-	var sm := CylinderMesh.new()
-	sm.top_radius = 0.22
-	sm.bottom_radius = 0.26
-	sm.height = 0.2
-	sm.radial_segments = 10
-	scarf.mesh = sm
-	scarf.material_override = ForestBuilder.mat(Color(0.431, 0.055, 0.086), 0.75)
-	scarf.position = Vector3(0, 1.46, 0)
-	player.add_child(scarf)
+	# شخصية بشرية مفصليّة بدل الكبسولة. الجنس يُقرأ من الإعدادات،
+	# ويُختار من شاشة ما قبل اللعب.
+	var rig := CharacterRig.create(str(Settings.get_value("character_gender")))
+	player.add_child(rig)
+	player.set("rig", rig)
 
 	var shape := CollisionShape3D.new()
+	shape.name = "Collider"        # باسمه يجده تبديل الوضع ليغيّر الارتفاع
 	var cs := CapsuleShape3D.new()
 	cs.radius = 0.33
 	cs.height = 1.75
@@ -146,6 +118,38 @@ func _wire() -> void:
 	hud.inventory_pressed.connect(func() -> void: inventory_ui.open_panel())
 	hud.pause_pressed.connect(func() -> void: pause_menu.toggle())
 
+	# أزرار ببجي موصولة بسلوك حقيقي لا بشكل فارغ
+	hud.fire_changed.connect(func(v: bool) -> void: player.set_fire(v))
+	hud.aim_changed.connect(func(v: bool) -> void: player.set_aim(v))
+	hud.crouch_pressed.connect(func() -> void: player.toggle_crouch())
+	hud.prone_pressed.connect(func() -> void: player.toggle_prone())
+	hud.reload_pressed.connect(func() -> void: hud.toast("تعبئة", "⟳", Palette.DUST))
+	hud.autorun_toggled.connect(func(v: bool) -> void: player.set_auto_run(v))
+	hud.swim_vertical.connect(func(d: int) -> void: player.set_swim_vertical(d))
+	hud.weapon_selected.connect(func(_i: int) -> void: pass)
+	# دخول الماء يُظهر أزرار السباحة والغوص ويخفيها عند الخروج
+	player.swim_changed.connect(func(v: bool) -> void: hud.set_swimming(v))
+	player.stance_changed.connect(func(_st: String) -> void: pass)
+	player.set_water_level(WorldProfile.WATER_LEVEL)
+
+	# مدنيّون يسكنون العالم: المكان المأهول يُقرأ غير الخالي
+	var civ := Civilians.new()
+	civ.name = "Civilians"
+	add_child(civ)
+	civ.setup(WorldProfile.new(), player)
+
+	# خبز الخريطة المصغّرة مرّة واحدة من بيانات العالم نفسها.
+	# البديل — كاميرا ثانية تصوّر من فوق كل إطار — يكلّف ثلث معدّل
+	# الإطارات على معالج جوال، وهو ثمن لا يستحقّه مربّع صغير.
+	if hud.minimap:
+		var wp := WorldProfile.new()
+		hud.minimap.world_half = WorldProfile.HALF
+		var river := PackedVector2Array()
+		var wr := get_node_or_null("WorldRenderer")
+		if wr and wr.get("data") != null and wr.data.get("river_points") != null:
+			river = wr.data.river_points
+		hud.minimap.bake(wp, river)
+
 	player.stamina_changed.connect(func(r: float) -> void: hud.set_stamina(r))
 	interactor.target_changed.connect(func(_t: Interactable, txt: String) -> void:
 		hud.set_interact_prompt(txt))
@@ -177,6 +181,14 @@ func _mark_chapter_reached() -> void:
 	SaveSystem.unlock_chapter(chapter_index)
 	SaveSystem.data["player_position"] = [player.position.x, player.position.y, player.position.z]
 	SaveSystem.save_game()
+
+func _feed_hud() -> void:
+	if player == null or hud == null:
+		return
+	var yaw := fposmod(rad_to_deg(-cam.rotation.y if cam else -player.rotation.y),
+		360.0)
+	var spd := Vector2(player.velocity.x, player.velocity.z).length()
+	hud.feed(player.global_position, yaw, spd, player.state_label())
 
 func _process(_delta: float) -> void:
 	if player and cam:
