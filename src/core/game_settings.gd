@@ -18,8 +18,8 @@ const DEFAULTS := {
 	"time_of_day": "day",
 	"brightness": 0.5,
 	"show_vegetation": false,
-	"show_rocks": true,
-	"show_geology": true,
+	"show_rocks": false,            # مُطفأ: حصى ملصوق على أرض عارية
+	"show_geology": false,          # مُطفأة: كتل عملاقة طافية تكلّف 100 فريم
 	"merge_statics": true,
 	"invert_y": false,
 	"show_fps": false,
@@ -39,6 +39,7 @@ const DEFAULTS := {
 	"gfx_auto_detected": false,     # هل اختار المحرّك المستوى لهذا الجهاز بعد؟
 	"gfx_show_fps": false,          # عدّاد الفريمات على الشاشة
 	"character_gender": "male",     # male أو female — يُختار قبل اللعب
+	"hud_layout": {},               # مواضع أزرار الشاشة، نسبية لحجم الشاشة
 	"gfx_colorblind": "none",        # تصحيح حقيقي لا تلوين
 	"ui_safe_area": 0.0,             # إزاحة واجهة الشاشات غير القياسية
 }

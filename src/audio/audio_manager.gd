@@ -15,8 +15,11 @@ const AMBIENT := {
 
 ## طبقات الجو: تعمل معاً وتُمزج حسب مكان اللاعب، فيتغيّر الصوت
 ## بالمشي لا بالانتقال بين "مناطق" مقطوعة.
-const LAYERS := ["forest", "river", "birds", "indoor"]
-const LAYER_DB := {"forest": -6.0, "river": -4.0, "birds": -9.0, "indoor": -8.0}
+## طبقة الطيور أُزيلت بطلب اللاعب: صوت غير واقعي في وادٍ مهجور
+## نهاراً. الملف باقٍ في الأصول إن عادت الحاجة إليه.
+const LAYERS := ["forest", "river", "indoor"]
+## الهواء خُفّض 8 ديسيبل والنهر 6: كانا يغطّيان على كل شيء آخر
+const LAYER_DB := {"forest": -14.0, "river": -10.0, "indoor": -10.0}
 const SFX := {
 	"footstep_1": "res://assets/audio/sfx/footstep_1.wav",
 	"footstep_2": "res://assets/audio/sfx/footstep_2.wav",

@@ -30,18 +30,32 @@ func _ready() -> void:
 	## التمرير: المحتوى أطول من شاشة الجوال، وCenterContainer كان
 	## يقصّ ما يزيد فتختفي الإعدادات السفلية. ScrollContainer يسمح
 	## بالسحب باللمس (Godot يحوّل اللمس إلى تمرير تلقائياً).
+	## ثلاث طبقات: شريط علوي ثابت، ومنطقة تمرير، وشريط سفلي ثابت.
+	## السبب أن زرّي الإغلاق والحفظ يجب أن يبقيا مرئيين مهما نزل
+	## اللاعب في القائمة — وإلا احتاج التمرير إلى الأسفل ليحفظ.
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["top", "bottom", "left", "right"]:
-		margin.add_theme_constant_override("margin_" + side, 18)
+		margin.add_theme_constant_override("margin_" + side, 14)
 	add_child(margin)
 
+	var outer := VBoxContainer.new()
+	outer.layout_direction = Control.LAYOUT_DIRECTION_RTL
+	outer.add_theme_constant_override("separation", 8)
+	margin.add_child(outer)
+
+	outer.add_child(_top_bar())
+
 	var scroll := ScrollContainer.new()
+	scroll.name = "Scroll"
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	scroll.follow_focus = true          # التنقّل بالزناد يُبقي العنصر مرئياً
+	scroll.follow_focus = true
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	margin.add_child(scroll)
+	# منطقة ميتة للسحب: بدونها تخطف المنزلقات اللمسة فلا تتمرّر
+	# الشاشة أبداً. 28 بكسلاً تكفي لتمييز سحب رأسي عن ضبط منزلق.
+	scroll.add_theme_constant_override("scroll_deadzone", 28)
+	outer.add_child(scroll)
 
 	# صفّ أفقي يوسّط اللوحة دون أن يقيّد ارتفاعها
 	var row := HBoxContainer.new()
@@ -52,9 +66,9 @@ func _ready() -> void:
 
 	var panel := PanelContainer.new()
 	panel.name = "Panel"
-	# عرض متجاوب: لا يتجاوز 880 ولا يفيض على الشاشات الضيّقة
+	# عرض متجاوب: يملأ الشاشات العريضة بدل عمود ضيّق وسط سواد
 	var vw := float(get_viewport_rect().size.x)
-	panel.custom_minimum_size = Vector2(minf(880.0, vw - 48.0), 0)
+	panel.custom_minimum_size = Vector2(clampf(vw * 0.62, 620.0, 1180.0), 0)
 	panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	row.add_child(panel)
 
@@ -66,9 +80,6 @@ func _ready() -> void:
 	col.layout_direction = Control.LAYOUT_DIRECTION_RTL
 	col.add_theme_constant_override("separation", 10)
 	panel.add_child(col)
-
-	col.add_child(_header("الإعدادات"))
-	col.add_child(_separator())
 
 	_rows.append(_add(col, SettingSlider.new("master_volume", "الصوت", "♪")))
 	_rows.append(_add(col, SettingSlider.new("music_volume", "الموسيقى", "♫")))
@@ -142,6 +153,18 @@ func _ready() -> void:
 		"gfx_show_fps", "عداد الإطارات",
 		[false, true], ["إخفاء", "إظهار"], "📊")))
 
+	# محرّر مواضع الأزرار: يفتح شاشة سحب فوق الإعدادات
+	var edit_row := HBoxContainer.new()
+	edit_row.layout_direction = Control.LAYOUT_DIRECTION_RTL
+	edit_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	var edit_btn := Button.new()
+	edit_btn.text = "✥  تعديل أزرار الشاشة"
+	edit_btn.custom_minimum_size = Vector2(340, 58)
+	edit_btn.add_theme_font_size_override("font_size", 21)
+	edit_btn.pressed.connect(_open_layout_editor)
+	edit_row.add_child(edit_btn)
+	col.add_child(edit_row)
+
 	_rows.append(_add(col, SettingSlider.new("ui_safe_area",
 		"واجهة الشاشات غير القياسية", "▭", 0.0, 1.0, 0.05)))
 
@@ -168,36 +191,97 @@ func _ready() -> void:
 
 	col.add_child(_separator())
 
-	var actions := HBoxContainer.new()
-	actions.layout_direction = Control.LAYOUT_DIRECTION_RTL
-	actions.alignment = BoxContainer.ALIGNMENT_CENTER
-	actions.add_theme_constant_override("separation", 18)
-	col.add_child(actions)
+	outer.add_child(_bottom_bar())
+	_entrance(panel)
+
+
+## الشريط العلوي: العنوان وزرّ الإغلاق. يبقى ثابتاً فوق التمرير.
+func _top_bar() -> Control:
+	var bar := PanelContainer.new()
+	bar.name = "TopBar"
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.07, 0.04, 0.05, 0.92)
+	sb.border_color = Palette.BLOOD
+	sb.border_width_bottom = 2
+	sb.content_margin_left = 14
+	sb.content_margin_right = 14
+	sb.content_margin_top = 6
+	sb.content_margin_bottom = 6
+	bar.add_theme_stylebox_override("panel", sb)
+
+	var h := HBoxContainer.new()
+	h.layout_direction = Control.LAYOUT_DIRECTION_RTL
+	h.add_theme_constant_override("separation", 12)
+	bar.add_child(h)
+
+	var title := Label.new()
+	title.text = "الإعدادات"
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", UITheme.SIZE_HEADING + 4)
+	title.add_theme_color_override("font_color", Palette.BLOOD_HOT)
+	h.add_child(title)
+
+	# زرّ الإغلاق: يحفظ ثم يخرج. الخروج بلا حفظ يفقد عمل اللاعب.
+	var x := Button.new()
+	x.name = "CloseButton"
+	x.text = "✕"
+	x.custom_minimum_size = Vector2(62, 54)
+	x.add_theme_font_size_override("font_size", 26)
+	x.tooltip_text = "إغلاق والعودة"
+	x.pressed.connect(_on_back)
+	h.add_child(x)
+	return bar
+
+## الشريط السفلي: الحفظ وما يتبعه. يبقى ثابتاً تحت التمرير.
+func _bottom_bar() -> Control:
+	var bar := PanelContainer.new()
+	bar.name = "BottomBar"
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.07, 0.04, 0.05, 0.92)
+	sb.border_color = Palette.BLOOD
+	sb.border_width_top = 2
+	sb.content_margin_left = 12
+	sb.content_margin_right = 12
+	sb.content_margin_top = 8
+	sb.content_margin_bottom = 8
+	bar.add_theme_stylebox_override("panel", sb)
+
+	var h := HBoxContainer.new()
+	h.layout_direction = Control.LAYOUT_DIRECTION_RTL
+	h.alignment = BoxContainer.ALIGNMENT_CENTER
+	h.add_theme_constant_override("separation", 14)
+	bar.add_child(h)
+
+	var save := Button.new()
+	save.name = "SaveButton"
+	save.text = "حفظ الإعدادات"
+	save.custom_minimum_size = Vector2(250, 58)
+	save.add_theme_font_size_override("font_size", 22)
+	save.pressed.connect(_on_apply)
+	h.add_child(save)
 
 	var reset_gfx := Button.new()
 	reset_gfx.text = "إعادة ضبط الرسومات"
+	reset_gfx.custom_minimum_size = Vector2(230, 58)
 	reset_gfx.pressed.connect(_on_reset_graphics)
-	actions.add_child(reset_gfx)
-
-	var apply := Button.new()
-	apply.text = "تطبيق"
-	apply.custom_minimum_size = Vector2(210, 60)
-	apply.pressed.connect(_on_apply)
-	actions.add_child(apply)
+	h.add_child(reset_gfx)
 
 	var reset := Button.new()
-	reset.text = "إعادة تعيين"
-	reset.custom_minimum_size = Vector2(210, 60)
+	reset.text = "إعادة تعيين الكل"
+	reset.custom_minimum_size = Vector2(210, 58)
 	reset.pressed.connect(_on_reset)
-	actions.add_child(reset)
+	h.add_child(reset)
+	return bar
 
-	var back := Button.new()
-	back.text = "رجوع"
-	back.custom_minimum_size = Vector2(210, 60)
-	back.pressed.connect(_on_back)
-	actions.add_child(back)
-
-	_entrance(panel)
+## يفتح محرّر مواضع أزرار الشاشة فوق الإعدادات
+func _open_layout_editor() -> void:
+	var ed := HudLayoutEditor.new()
+	var layer := CanvasLayer.new()
+	layer.layer = 60
+	layer.add_child(ed)
+	ed.closed.connect(func() -> void: layer.queue_free())
+	add_child(layer)
 
 func _add(parent: Node, row: Control) -> Control:
 	parent.add_child(row)

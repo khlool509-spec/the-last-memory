@@ -477,13 +477,17 @@ func _zone_update() -> void:
 			inside = true
 			break
 
-	var w_river := clampf(1.0 - river_d / 46.0, 0.0, 1.0)
-	w_river = w_river * w_river
+	# صوت النهر يخفت تدريجياً ويصمت تماماً عند 50 متراً.
+	# التربيع يجعل الانخفاض سريعاً قرب الحافة وبطيئاً قرب الماء،
+	# وهو ما تفعله الصوتيات الحقيقية: الشدّة تتناقص مع مربّع المسافة.
+	var w_river := clampf(1.0 - river_d / 50.0, 0.0, 1.0)
+	w_river = w_river * w_river * 0.72
 	var w_indoor := 1.0 if inside else 0.0
-	var w_forest := clampf(1.0 - w_indoor, 0.0, 1.0) * clampf(1.0 - w_river * 0.55, 0.35, 1.0)
+	var w_forest := clampf(1.0 - w_indoor, 0.0, 1.0) * clampf(1.0 - w_river * 0.55, 0.35, 1.0) * 0.55
+	Audio.set_layer_mix({"forest": w_forest, "river": w_river, "indoor": w_indoor})
+
+	# الانفتاح: كم يرتفع الموضع فوق منسوب الماء. يستخدمه الضباب أدناه.
 	var open := clampf((ground - wl) / 14.0, 0.0, 1.0)
-	var w_birds := clampf(open * (1.0 - w_indoor) * 0.9, 0.0, 1.0)
-	Audio.set_layer_mix({"forest": w_forest, "river": w_river, "birds": w_birds, "indoor": w_indoor})
 
 	# السطح تحت القدم
 	var on_structure := p.y > ground + 0.55
