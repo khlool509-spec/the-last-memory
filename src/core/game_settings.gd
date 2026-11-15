@@ -40,6 +40,7 @@ const DEFAULTS := {
 	"gfx_show_fps": false,          # عدّاد الفريمات على الشاشة
 	"character_gender": "male",     # male أو female — يُختار قبل اللعب
 	"hud_layout": {},               # مواضع أزرار الشاشة، نسبية لحجم الشاشة
+	"tutorial_done": false,         # هل أتمّ اللاعب تعليمات التحكّم؟
 	"gfx_colorblind": "none",        # تصحيح حقيقي لا تلوين
 	"ui_safe_area": 0.0,             # إزاحة واجهة الشاشات غير القياسية
 }

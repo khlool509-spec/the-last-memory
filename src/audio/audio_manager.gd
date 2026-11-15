@@ -3,6 +3,9 @@ extends Node
 ## كل الأصوات مولَّدة رياضياً داخل المشروع (tools/gen_audio.py)،
 ## فلا يوجد أي أصل خارجي ولا مشكلة ترخيص.
 
+## مستوى فراش الموسيقى: خافت عمداً. ‎−10 كان يطغى على الواجهة.
+const MUSIC_BED_DB := -26.0   # خافتة: خلفية لا تنافس الواجهة
+
 const MUSIC := {
 	"menu": "res://assets/audio/music/menu_drone.wav",
 }
@@ -162,8 +165,11 @@ func _stream(path: String, looped: bool) -> AudioStream:
 		w.take_over_path("")
 		w.loop_mode = AudioStreamWAV.LOOP_FORWARD
 		w.loop_begin = 0
-		# 16-bit أحادي: بايتان لكل إطار
-		w.loop_end = int(w.data.size() / 2.0)
+		# صفر = إلى نهاية العيّنة. الحساب السابق كان يقسم حجم البايتات
+		# على 2 بافتراض 16-bit أحادي، لكن Godot يستورد هذه الملفات
+		# بصيغة QOA المضغوطة حيث البايتات ليست إطارات أصلاً — فكانت
+		# الحلقة تقطع عند سُبع الملف ثم تدور على مقطع قصير.
+		w.loop_end = 0
 		s = w
 	_cache[path] = s
 	return s
@@ -198,12 +204,23 @@ func play_music(key: String) -> void:
 		return
 	_current_music = key
 	_music.stream = s
-	_music.volume_db = -10.0
+	# موسيقى اللوبي خلفية لا واجهة: تبدأ من الصمت وتصعد خلال ثانيتين
+	# إلى مستوى خافت يُحسّ ولا يُسمع فوقه كلام. منزلق الموسيقى في
+	# الإعدادات يضرب فوق هذا المستوى لا يستبدله.
+	_music.volume_db = -60.0
 	_music.play()
+	var tw := create_tween()
+	tw.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(_music, "volume_db", MUSIC_BED_DB, 2.0)
 
+## توقّف بتلاشٍ: القطع المفاجئ يُسمع كخلل لا كانتقال
 func stop_music() -> void:
+	if _current_music == "":
+		return
 	_current_music = ""
-	_music.stop()
+	var tw := create_tween()
+	tw.tween_property(_music, "volume_db", -60.0, 0.6)
+	tw.tween_callback(_music.stop)
 
 func play_ambient(key: String) -> void:
 	var path := str(AMBIENT.get(key, ""))
@@ -220,6 +237,9 @@ func stop_ambient() -> void:
 	_current_ambient = ""
 	_ambient.stop()
 
+## إيقاف فوري بلا تلاشٍ — للانتقال بين المشاهد. التلاشي هنا يُسمع
+## كذيل عالق من المشهد السابق لا كانتقال ناعم.
 func stop_all() -> void:
-	stop_music()
+	_current_music = ""
+	_music.stop()
 	stop_ambient()

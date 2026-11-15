@@ -190,7 +190,14 @@ func _test_audio() -> void:
 	_true("الأجواء محمّلة", amb != null)
 	if amb != null:
 		_eq("الأجواء تتكرر", amb.loop_mode, AudioStreamWAV.LOOP_FORWARD)
-		_true("نهاية التكرار محسوبة", amb.loop_end > 1000, str(amb.loop_end))
+		# صفر = إلى نهاية العيّنة، وهو الصحيح لأي صيغة. الاختبار
+		# السابق كان يطلب رقماً كبيراً، فمرّ على حساب خاطئ يفترض
+		# 16-bit بينما Godot يستورد هذه الملفات بصيغة QOA المضغوطة،
+		# وكانت النتيجة حلقة تقطع عند سُبع الملف.
+		var frames := int(amb.get_length() * float(amb.mix_rate))
+		_true("التكرار يغطّي العيّنة كاملة",
+			amb.loop_end == 0 or amb.loop_end >= frames - 2,
+			"نهاية=%d بينما الإطارات=%d" % [amb.loop_end, frames])
 		_true("طول الأجواء كافٍ (%.1f ث)" % amb.get_length(), amb.get_length() > 10.0)
 
 	Audio.play_music("menu")
