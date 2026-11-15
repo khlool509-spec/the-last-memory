@@ -44,6 +44,7 @@ const POSE_FIX := {
 }
 var _base_scale := Vector3.ONE
 var _pose_t := 0.0
+var _base_yaw := 0.0
 
 func is_loaded() -> bool:
 	return _ok
@@ -71,6 +72,11 @@ func load_model(path: String, scale_to_height: float = 0.0) -> bool:
 	if scale_to_height > 0.0:
 		_fit_height(scale_to_height)
 	_base_scale = root.scale
+	# مجسّمات مصادر الأصول تواجه ‎+Z‎ غالباً، وأمام Godot هو ‎-Z‎.
+	# بدون هذه الدورة تمشي الشخصية وهي تنظر إلى الكاميرا لا إلى
+	# حيث تتّجه — وهو ما بدا «وجهه بالنظر إليّ».
+	root.rotation.y += PI
+	_base_yaw = root.rotation.y
 	_ok = true
 	return true
 
@@ -187,6 +193,7 @@ func _apply_pose_fix(key: String) -> void:
 	var pitch := float(f.get("pitch", 0.0))
 	var lift := float(f.get("lift", 0.0))
 	var squash := float(f.get("squash", 1.0))
+	root.rotation.y = _base_yaw
 	root.rotation_degrees.x = lerpf(root.rotation_degrees.x, pitch, 0.18)
 	root.position.y = lerpf(root.position.y, lift, 0.18)
 	var want := _base_scale * Vector3(1.0, squash, 1.0)

@@ -23,7 +23,11 @@ func _ready() -> void:
 	_build_ui()
 	_wire()
 	place_contents()
-	Audio.stop_music()
+	# الموسيقى أثناء اللعب اختيارية: الافتراضي صمت ليُسمع العالم
+	if bool(Settings.get_value("audio_music_in_game")):
+		Audio.play_music("menu")
+	else:
+		Audio.stop_music()
 	if ambient_key != "":
 		Audio.play_ambient(ambient_key)
 	Goals.start_chapter(chapter_index)

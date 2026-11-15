@@ -41,6 +41,11 @@ const DEFAULTS := {
 	"character_gender": "male",     # male أو female — يُختار قبل اللعب
 	"hud_layout": {},               # مواضع أزرار الشاشة، نسبية لحجم الشاشة
 	"tutorial_done": false,         # هل أتمّ اللاعب تعليمات التحكّم؟
+	"ambient_volume": 0.7,          # أصوات البيئة
+	"step_volume": 0.55,            # صوت الخطوات وحده
+	"audio_river": true,            # صوت النهر
+	"audio_wind": true,             # صوت الهواء
+	"audio_music_in_game": false,   # الموسيقى أثناء اللعب لا في القائمة فقط
 	"gfx_colorblind": "none",        # تصحيح حقيقي لا تلوين
 	"ui_safe_area": 0.0,             # إزاحة واجهة الشاشات غير القياسية
 }

@@ -56,6 +56,16 @@ func _ready() -> void:
 	# الشاشة أبداً. 28 بكسلاً تكفي لتمييز سحب رأسي عن ضبط منزلق.
 	scroll.add_theme_constant_override("scroll_deadzone", 28)
 	outer.add_child(scroll)
+	# المنطقة الميتة وحدها تركت «نقاطاً عمياء»: المنزلق يبتلع اللمسة
+	# قبل أن تتجاوزها، فلا تتمرّر الشاشة إن بدأ الإصبع فوق منزلق.
+	# طبقة الالتقاط هذه تغطّي الصفحة كلها وتقرّر بنفسها: حركة رأسية
+	# تتجاوز 14 بكسل تُمرّر الصفحة وتُلغى من العنصر، وما دون ذلك
+	# يمرّ إلى العنصر كالمعتاد.
+	var grab := _ScrollGrab.new()
+	grab.scroll = scroll
+	grab.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	scroll.add_child(grab)
+	grab.z_index = 50
 
 	# صفّ أفقي يوسّط اللوحة دون أن يقيّد ارتفاعها
 	var row := HBoxContainer.new()
@@ -81,9 +91,25 @@ func _ready() -> void:
 	col.add_theme_constant_override("separation", 10)
 	panel.add_child(col)
 
-	_rows.append(_add(col, SettingSlider.new("master_volume", "الصوت", "♪")))
+	col.add_child(_header("الصوت"))
+
+	_rows.append(_add(col, SettingSlider.new("master_volume", "الصوت العام", "♪")))
 	_rows.append(_add(col, SettingSlider.new("music_volume", "الموسيقى", "♫")))
 	_rows.append(_add(col, SettingSlider.new("sfx_volume", "المؤثرات", "♬")))
+	_rows.append(_add(col, SettingSlider.new("ambient_volume", "أصوات البيئة", "≈")))
+	_rows.append(_add(col, SettingSlider.new("step_volume", "صوت الخطوات", "👣")))
+	_rows.append(_add(col, OptionCycler.new(
+		"audio_river", "صوت النهر",
+		[true, false], ["مفعّل", "مكتوم"], "〜")))
+	_rows.append(_add(col, OptionCycler.new(
+		"audio_wind", "صوت الهواء",
+		[true, false], ["مفعّل", "مكتوم"], "🌬")))
+	_rows.append(_add(col, OptionCycler.new(
+		"audio_music_in_game", "الموسيقى أثناء اللعب",
+		[false, true], ["في القائمة فقط", "دائماً"], "♩")))
+
+	col.add_child(_separator())
+	col.add_child(_header("التحكّم"))
 	_rows.append(_add(col, SettingSlider.new("camera_sensitivity", "حساسية الكاميرا", "◎")))
 	_rows.append(_add(col, SettingSlider.new("brightness", "سطوع الصورة", "☀")))
 
@@ -359,3 +385,40 @@ func _on_reset_graphics() -> void:
 	for r in _rows:
 		if r.has_method("refresh_from_settings"):
 			r.refresh_from_settings()
+
+## طبقة تلتقط السحب الرأسي فوق كامل الصفحة. موضوعة فوق كل العناصر
+## لكنها شفّافة للمسات القصيرة: تمرّرها إلى ما تحتها.
+class _ScrollGrab:
+	extends Control
+	var scroll: ScrollContainer = null
+	var _start := Vector2.ZERO
+	var _last := 0.0
+	var _active := false
+	var _armed := false
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_PASS
+
+	func _gui_input(event: InputEvent) -> void:
+		if event is InputEventScreenTouch or event is InputEventMouseButton:
+			var pressed: bool = event.pressed
+			var pos: Vector2 = event.position
+			if pressed:
+				_start = pos
+				_last = pos.y
+				_armed = true
+				_active = false
+			else:
+				_armed = false
+				if _active:
+					accept_event()   # كان سحباً: لا تُسلّمه للعنصر
+				_active = false
+		elif (event is InputEventScreenDrag or event is InputEventMouseMotion) \
+				and _armed and scroll != null:
+			var pos: Vector2 = event.position
+			if not _active and absf(pos.y - _start.y) > 14.0:
+				_active = true       # تجاوز العتبة: صار سحباً لا لمسة
+			if _active:
+				scroll.scroll_vertical -= int(pos.y - _last)
+				_last = pos.y
+				accept_event()

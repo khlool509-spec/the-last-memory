@@ -66,6 +66,7 @@ func _ready() -> void:
 	_build_minimap()
 	_build_coords()
 	_build_weapons()
+	_apply_saved_layout()
 	_build_status()
 	_build_objective()
 	_build_prompt()
@@ -271,8 +272,10 @@ func _build_compass() -> void:
 	compass = CompassStrip.new()
 	compass.name = "Compass"
 	compass.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	compass.offset_left = 230
-	compass.offset_right = -230
+	# الشريط يمتدّ على كامل عرض الشاشة: كان محصوراً بين هامشين
+	# 230 بكسل فيظهر منه قوس ضيّق لا يكفي للاهتداء.
+	compass.offset_left = 8
+	compass.offset_right = -8
 	compass.offset_top = 6
 	compass.offset_bottom = 52
 	_root.add_child(compass)
@@ -318,6 +321,57 @@ func feed(pos: Vector3, yaw_deg: float, speed: float, state: String) -> void:
 		minimap.set_player(Vector2(pos.x, pos.z), deg_to_rad(yaw_deg))
 	if coords:
 		coords.set_state(pos, yaw_deg, speed, state)
+
+
+## ══════════ تطبيق مخطّط الأزرار المحفوظ ══════════
+## هذه هي الحلقة الناقصة التي جعلت المحرّر يبدو معطّلاً: كان يحفظ
+## المواضع فعلاً، لكن لا أحد يقرؤها عند بناء الواجهة فتعود الأزرار
+## إلى أماكنها المبرمَجة في كل تشغيل.
+##
+## الأزرار تُنتزع من حاوياتها وتُعلَّق على الجذر مباشرة، لأن العقدة
+## داخل حاوية موضعها تحسبه الحاوية لا نحن.
+const LAYOUT_NODES := {
+	"fire": "btn_fire", "aim": "btn_aim", "reload": "btn_reload",
+	"crouch": "btn_crouch", "prone": "btn_prone", "autorun": "btn_autorun",
+	"jump": "btn_jump", "interact": "btn_interact",
+}
+
+func _apply_saved_layout() -> void:
+	var raw = Settings.get_value("hud_layout")
+	if not (raw is Dictionary) or (raw as Dictionary).is_empty():
+		return                      # لا مخطّط محفوظ: تبقى المواضع الأصلية
+	var screen := _root.size
+	if screen.x < 1.0:
+		screen = get_viewport().get_visible_rect().size
+	var lay := HudLayoutEditor.layout()
+	for key in LAYOUT_NODES:
+		if not (raw as Dictionary).has(key):
+			continue
+		var btn: Control = get(str(LAYOUT_NODES[key]))
+		if btn == null:
+			continue
+		_reparent_free(btn)
+		var c := HudLayoutEditor.to_pixels(lay[key], screen)
+		btn.position = c - btn.size * 0.5
+	if (raw as Dictionary).has("stick") and joystick:
+		_reparent_free(joystick)
+		var c := HudLayoutEditor.to_pixels(lay["stick"], screen)
+		joystick.position = c - joystick.size * 0.5
+
+## ينقل العقدة إلى الجذر محافظاً على حجمها، فيصير موضعها لنا
+func _reparent_free(n: Control) -> void:
+	var sz := n.size
+	var parent := n.get_parent()
+	if parent == _root:
+		return
+	parent.remove_child(n)
+	_root.add_child(n)
+	n.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	n.size = sz
+
+## يُستدعى بعد حفظ مخطّط جديد: يعيد بناء المواضع بلا إعادة تحميل
+func refresh_layout() -> void:
+	_apply_saved_layout()
 
 # ---------- الحالة ----------
 func _build_status() -> void:

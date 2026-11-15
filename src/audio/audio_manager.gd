@@ -22,7 +22,8 @@ const AMBIENT := {
 ## نهاراً. الملف باقٍ في الأصول إن عادت الحاجة إليه.
 const LAYERS := ["forest", "river", "indoor"]
 ## الهواء خُفّض 8 ديسيبل والنهر 6: كانا يغطّيان على كل شيء آخر
-const LAYER_DB := {"forest": -14.0, "river": -10.0, "indoor": -10.0}
+## النهر أعلى من الهواء: هو معلَم مكاني يُهتدى به، والهواء خلفية.
+const LAYER_DB := {"forest": -15.0, "river": -5.0, "indoor": -11.0}
 const SFX := {
 	"footstep_1": "res://assets/audio/sfx/footstep_1.wav",
 	"footstep_2": "res://assets/audio/sfx/footstep_2.wav",
@@ -113,6 +114,13 @@ func _process(delta: float) -> void:
 		if lp == null:
 			continue
 		var want: float = float(_layer_target.get(key, 0.0))
+		# مفاتيح الكتم من الإعدادات: كتم حقيقي لا خفض
+		if key == "river" and not bool(Settings.get_value("audio_river")):
+			want = 0.0
+		elif key == "forest" and not bool(Settings.get_value("audio_wind")):
+			want = 0.0
+		# منزلق أصوات البيئة يضرب فوق وزن الموقع
+		want *= clampf(float(Settings.get_value("ambient_volume")), 0.0, 1.0)
 		var target_db := -80.0 if want <= 0.01 else linear_to_db(want) + float(LAYER_DB[key])
 		lp.volume_db = move_toward(lp.volume_db, target_db, 26.0 * delta)
 		if lp.playing and lp.volume_db <= -79.0 and want <= 0.01:
@@ -125,8 +133,11 @@ func play_surface_step(surface: String, running: bool) -> void:
 	if not SFX.has(key):
 		play_footstep(running)
 		return
+	# منزلق الخطوات مستقلّ: بعض اللاعبين يريدونها أخفت دون خفض الباقي
+	var sv := clampf(float(Settings.get_value("step_volume")), 0.0, 1.0)
+	var sdb := -80.0 if sv <= 0.01 else linear_to_db(sv)
 	play(key, _rng.randf_range(0.93, 1.09) * (1.07 if running else 1.0),
-		-3.0 if running else -7.0)
+		(-3.0 if running else -7.0) + sdb)
 
 func _exit_tree() -> void:
 	# تحرير المخزون عند الخروج وإلا بقيت موارد مستخدَمة ونبّه المحرك
@@ -165,11 +176,12 @@ func _stream(path: String, looped: bool) -> AudioStream:
 		w.take_over_path("")
 		w.loop_mode = AudioStreamWAV.LOOP_FORWARD
 		w.loop_begin = 0
-		# صفر = إلى نهاية العيّنة. الحساب السابق كان يقسم حجم البايتات
-		# على 2 بافتراض 16-bit أحادي، لكن Godot يستورد هذه الملفات
-		# بصيغة QOA المضغوطة حيث البايتات ليست إطارات أصلاً — فكانت
-		# الحلقة تقطع عند سُبع الملف ثم تدور على مقطع قصير.
-		w.loop_end = 0
+		# نهاية الحلقة = عدد الإطارات الحقيقي، محسوباً من الطول ومعدّل
+		# المزج. لا من حجم البايتات: Godot يستورد هذه الملفات بصيغة
+		# QOA المضغوطة حيث البايت ليس إطاراً. ولا صفراً: صفر في
+		# AudioStreamWAV يعني حلقة بطول صفر فيتوقّف التشغيل، لا
+		# «إلى النهاية» كما قد يُظنّ. كلا الخطأين أسكت الموسيقى.
+		w.loop_end = int(w.get_length() * float(w.mix_rate))
 		s = w
 	_cache[path] = s
 	return s

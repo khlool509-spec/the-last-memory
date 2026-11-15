@@ -262,33 +262,62 @@ def indoor_room(dur=16.0):
 
 # ---------- خطوات على أسطح مختلفة ----------
 def footstep_surface(seed, kind):
+    """خطوة واقعية: لا مُذبذب ولا نغمة.
+
+    الخطوة الحقيقية صوت اصطدام لا آلة موسيقية. النسخة السابقة كانت
+    تضيف موجة جيبية نقية (52-190 هرتز) فوق الضجيج، فكانت كل خطوة
+    تحمل نغمة صافية تُسمع أزيزاً — وهو ما شكا منه اللاعب.
+
+    البناء هنا فيزيائي: نبضة ضجيج منخفضة للارتطام، ونبضة أعلى
+    ترددياً للسطح تتأخّر عنها قليلاً كما يتأخّر احتكاك النعل عن
+    وقع الكعب، وكلتاهما مغلّفة بهجوم فوري وانحدار أسّي قصير.
+    """
     r = np.random.default_rng(seed)
-    d = 0.21
+    d = r.uniform(0.085, 0.135)        # خطوة حقيقية: أقل من سُبع ثانية
     ts = t(d)
-    n = r.standard_normal(len(ts))
-    if kind == "grass":
-        body = highpass_fft(lowpass_fft(n, 3200.0), 900.0)
-        env = np.exp(-r.uniform(20, 28) * ts)
-        thump = np.sin(2 * np.pi * r.uniform(52, 70) * ts) * np.exp(-40 * ts) * 0.28
-        amp = r.uniform(0.38, 0.52)
-    elif kind == "wood":
-        body = lowpass_fft(n, 1400.0)
-        env = np.exp(-r.uniform(16, 22) * ts)
-        thump = (np.sin(2 * np.pi * r.uniform(130, 190) * ts) * np.exp(-24 * ts) * 0.55
-                 + np.sin(2 * np.pi * r.uniform(62, 86) * ts) * np.exp(-30 * ts) * 0.4)
-        amp = r.uniform(0.55, 0.72)
+    n = len(ts)
+
+    # الارتطام: ضجيج منخفض ينحدر بسرعة — كتلة الجسم على الأرض
+    imp = r.standard_normal(n)
+    if kind == "wood":
+        body = lowpass_fft(imp, 520.0)
+        decay = 46.0
     elif kind == "stone":
-        body = highpass_fft(n, 1800.0)
-        env = np.exp(-r.uniform(34, 46) * ts)
-        thump = np.sin(2 * np.pi * r.uniform(90, 130) * ts) * np.exp(-52 * ts) * 0.42
-        amp = r.uniform(0.5, 0.66)
-    else:  # water
-        body = highpass_fft(lowpass_fft(n, 4200.0), 600.0)
-        env = np.exp(-r.uniform(11, 16) * ts) * (1 - np.exp(-80 * ts))
-        thump = np.sin(2 * np.pi * r.uniform(70, 95) * ts) * np.exp(-26 * ts) * 0.3
-        amp = r.uniform(0.5, 0.7)
-    x = body / (np.max(np.abs(body)) + 1e-9) * env + thump
-    return fade(x / (np.max(np.abs(x)) + 1e-9) * amp, 4)
+        body = lowpass_fft(imp, 380.0)
+        decay = 72.0
+    elif kind == "water":
+        body = lowpass_fft(imp, 300.0)
+        decay = 38.0
+    else:                               # عشب وتراب
+        body = lowpass_fft(imp, 440.0)
+        decay = 58.0
+    body *= np.exp(-decay * ts)
+
+    # السطح: احتكاك النعل. نطاق تردّدي يميّز المادة، ويتأخّر 6-14 ملّي
+    surf_n = r.standard_normal(n)
+    if kind == "grass":
+        surf = highpass_fft(lowpass_fft(surf_n, 6500.0), 1600.0)
+        s_dec, s_amp = 34.0, 0.52
+    elif kind == "wood":
+        surf = highpass_fft(lowpass_fft(surf_n, 3400.0), 700.0)
+        s_dec, s_amp = 40.0, 0.34
+    elif kind == "stone":
+        surf = highpass_fft(lowpass_fft(surf_n, 9000.0), 2600.0)
+        s_dec, s_amp = 66.0, 0.46
+    else:                               # ماء: رذاذ أعرض وأبطأ انحداراً
+        surf = highpass_fft(lowpass_fft(surf_n, 7500.0), 900.0)
+        s_dec, s_amp = 19.0, 0.62
+    lag = int(SR * r.uniform(0.006, 0.014))
+    s_env = np.exp(-s_dec * ts) * (1.0 - np.exp(-260.0 * ts))
+    surf = np.concatenate([np.zeros(lag), surf[:n - lag]]) * s_env * s_amp
+
+    x = body / (np.max(np.abs(body)) + 1e-9) + surf
+    x /= (np.max(np.abs(x)) + 1e-9)
+    # هجوم فوري بلا نقرة رقمية: ملّي ثانية واحدة تكفي
+    atk = int(SR * 0.001)
+    x[:atk] *= np.linspace(0.0, 1.0, atk)
+    return fade(x * r.uniform(0.42, 0.56), 3)
+
 
 FILES = [
     ("assets/audio/ambient/forest_night.wav", ambient_forest),
