@@ -213,8 +213,11 @@ jobs:
           test -n "$AS" || { echo "::error::apksigner غير موجود"; exit 1; }
           echo "--- apksigner verify ---"
           "$AS" verify --verbose --print-certs "$APK" | tee /tmp/sigout.txt
-          GOT=$(grep -iE "Signer #1 certificate SHA-256 digest" /tmp/sigout.txt \
-                | head -1 | sed 's/.*: *//' | tr -d ' :' | tr 'a-f' 'A-F')
+          # build-tools 36 يطبع "V3.0 Signer: certificate SHA-256 digest:"
+          # أما الصيغ الأقدم فتطبع "Signer #1 certificate SHA-256 digest:".
+          # لذا نطابق الجزء الثابت وحده.
+          GOT=$(grep -iE "certificate SHA-256 digest" /tmp/sigout.txt \
+                | head -1 | sed 's/.*digest: *//' | tr -d ' :' | tr 'a-f' 'A-F')
           test -n "$GOT" || { echo "::error::تعذّرت قراءة بصمة الشهادة"; exit 1; }
           echo "المتوقَّع: $EXPECTED"
           echo "الفعلي  : $GOT"
