@@ -24,6 +24,19 @@ const DEFAULTS := {
 	"invert_y": false,
 	"show_fps": false,
 	"vibration": true,
+	# --- الرسومات: كل مفتاح يمسّ المصيّر فعلاً عبر Graphics ---
+	"gfx_preset": "balanced",        # مخصص / إطارات / متوازن / جودة
+	"gfx_quality": "balanced",       # سبعة مستويات من «سلاسة فائقة» إلى «عالي HDR»
+	"gfx_fps_tier": "strong",        # سبع طبقات من «توفير الطاقة» إلى «ألترا إكستريم»
+	"gfx_fps_cap": 60,               # السقف اليدوي
+	"gfx_fps_manual": false,         # ضبط يدوي بدل الذكي
+	"gfx_adaptive": true,            # رسومات تكيّفية: القياس يتبع زمن الإطار
+	"gfx_shadows": true,
+	"gfx_power_save": false,
+	"gfx_antialiasing": true,
+	"gfx_style": "classic",          # كلاسيكي / زاه / واقعي / ناعم / سينمائي
+	"gfx_colorblind": "none",        # تصحيح حقيقي لا تلوين
+	"ui_safe_area": 0.0,             # إزاحة واجهة الشاشات غير القياسية
 }
 
 var _data: Dictionary = {}

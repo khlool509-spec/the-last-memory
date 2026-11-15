@@ -18,6 +18,7 @@ config/icon="res://assets/textures/icon/icon_512.png"
 [autoload]
 
 Settings="*res://src/core/game_settings.gd"
+Graphics="*res://src/core/graphics_manager.gd"
 SaveSystem="*res://src/save_system/save_system.gd"
 Router="*res://src/core/scene_router.gd"
 Inv="*res://src/inventory/inventory.gd"

@@ -86,3 +86,12 @@ func _refresh() -> void:
 	var tw := create_tween()
 	tw.tween_property(_value_label, "modulate:a", 0.4, 0.05)
 	tw.tween_property(_value_label, "modulate:a", 1.0, 0.12)
+
+## يُعيد قراءة القيمة من الإعدادات — بعد إعادة الضبط مثلاً
+func refresh_from_settings() -> void:
+	var v: Variant = Settings.get_value(key)
+	var i := _values.find(v)
+	if i >= 0:
+		_index = i
+		if _value_label:
+			_value_label.text = str(_labels[_index])

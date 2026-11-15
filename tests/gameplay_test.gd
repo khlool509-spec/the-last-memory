@@ -216,6 +216,68 @@ func _test_audio() -> void:
 
 # ---------- وقت اليوم والسطوع ----------
 func _test_daylight() -> void:
+	print("\n[إعدادات الرسومات — الأثر الحقيقي على المصيّر]")
+	# لا يكفي وجود المفتاح: كل إعداد يجب أن يغيّر المصيّر فعلاً.
+	var vp := get_viewport()
+	var scales := []
+	var lods := []
+	for q in Graphics.QUALITY_ORDER:
+		Settings.set_value("gfx_quality", q)
+		Graphics.apply_all()
+		scales.append(vp.scaling_3d_scale)
+		lods.append(vp.mesh_lod_threshold)
+	_true("مستويات الجودة سبعة", Graphics.QUALITY_ORDER.size() == 7)
+	_true("قياس التصيير يتصاعد مع الجودة (%.2f ← %.2f)" % [scales[0], scales[-1]],
+		scales[0] < scales[-1] and scales[0] <= 0.65 and scales[-1] >= 1.2)
+	_true("عتبة التفصيل تتناقص مع الجودة (%.1f ← %.1f)" % [lods[0], lods[-1]],
+		lods[0] > lods[-1])
+
+	var caps := []
+	for t in Graphics.FPS_ORDER:
+		Settings.set_value("gfx_fps_tier", t)
+		Graphics.apply_all()
+		caps.append(Engine.max_fps)
+	_true("طبقات الإطارات سبع", Graphics.FPS_ORDER.size() == 7)
+	_true("سقف الإطارات يتصاعد (%d ← %d)" % [caps[0], caps[-1]],
+		caps[0] <= 30 and caps[-1] >= 120)
+
+	Settings.set_value("gfx_quality", "hd")
+	Settings.set_value("gfx_power_save", false)
+	Settings.set_value("gfx_antialiasing", true)
+	Graphics.apply_all()
+	var aa_on := vp.msaa_3d
+	Settings.set_value("gfx_antialiasing", false)
+	Graphics.apply_all()
+	_true("تنعيم الحواف يبدّل MSAA (%d ← %d)" % [aa_on, vp.msaa_3d],
+		aa_on > 0 and vp.msaa_3d == 0)
+	Settings.set_value("gfx_antialiasing", true)
+
+	Settings.set_value("gfx_power_save", true)
+	Graphics.apply_all()
+	_true("توفير الطاقة يخفض القياس والإطارات (%.2f، %d)" % [
+		vp.scaling_3d_scale, Engine.max_fps],
+		vp.scaling_3d_scale <= 0.71 and Engine.max_fps <= 30 and vp.msaa_3d == 0)
+	Settings.set_value("gfx_power_save", false)
+
+	for pname in ["fps", "balanced", "quality"]:
+		Settings.set_value("gfx_preset", pname)
+		_true("الإعداد الجاهز %s يضبط المفاتيح" % pname,
+			str(Settings.get_value("gfx_quality")) == str(Graphics.PRESETS[pname]["gfx_quality"]))
+	Settings.set_value("gfx_quality", "hd")
+	_true("التعديل اليدوي ينقل إلى مخصص",
+		str(Settings.get_value("gfx_preset")) == "custom")
+
+	_true("أنماط الرسوم خمسة", Graphics.STYLE_ORDER.size() == 5)
+	_true("أوضاع عمى الألوان أربعة", Graphics.CB_ORDER.size() == 4)
+	var cb := Graphics.get_node_or_null("ColorBlindLayer/ColorBlindRect")
+	_true("طبقة تصحيح عمى الألوان موجودة", cb != null)
+	if cb:
+		Settings.set_value("gfx_colorblind", "deuteranopia")
+		_true("الطبقة تظهر عند تفعيل الوضع", (cb as Control).visible)
+		Settings.set_value("gfx_colorblind", "none")
+		_true("وتختفي عند العودة للعادي", not (cb as Control).visible)
+	Settings.set_value("gfx_preset", "balanced")
+
 	print("\n[وقت اليوم والسطوع]")
 	_eq("الافتراضي نهار", str(Settings.DEFAULTS["time_of_day"]), "day")
 	_true("السطوع الافتراضي في المنتصف",

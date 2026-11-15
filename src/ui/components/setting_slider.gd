@@ -10,10 +10,23 @@ var _slider: HSlider
 var _value_label: Label
 var _title: Label
 
-func _init(setting_key: String, title_text: String, glyph: String = "") -> void:
+## المدى اختياري: الافتراضي نسبة 0..1، ويمكن تمرير مدى حقيقي
+## (معدّل الإطارات مثلاً 20..120) فيُعرَض بالقيمة لا بالنسبة.
+var _lo := 0.0
+var _hi := 1.0
+var _as_percent := true
+
+func _init(setting_key: String, title_text: String, glyph: String = "",
+		lo: float = 0.0, hi: float = 1.0, step: float = 0.01) -> void:
 	key = setting_key
 	name = "Row_" + setting_key
+	_lo = lo
+	_hi = hi
+	_as_percent = is_equal_approx(lo, 0.0) and is_equal_approx(hi, 1.0)
 	_build(title_text, glyph)
+	_slider.min_value = lo
+	_slider.max_value = hi
+	_slider.step = step
 
 func _build(title_text: String, glyph: String) -> void:
 	layout_direction = Control.LAYOUT_DIRECTION_RTL
@@ -60,7 +73,8 @@ func _ready() -> void:
 	_slider.drag_ended.connect(_on_drag_ended)
 
 func _on_slider_changed(v: float) -> void:
-	Settings.set_value(key, v)
+	# المدى الحقيقي يُحفَظ عدداً صحيحاً (معدّل الإطارات مثلاً)
+	Settings.set_value(key, v if _as_percent else int(round(v)))
 	_refresh(v)
 	value_changed.emit(v)
 
@@ -69,8 +83,15 @@ func _on_drag_ended(changed: bool) -> void:
 		Settings.save_settings()
 
 func _refresh(v: float) -> void:
-	_value_label.text = "%d%%" % int(round(v * 100.0))
+	_value_label.text = ("%d%%" % int(round(v * 100.0))) if _as_percent \
+		else ("%d" % int(round(v)))
 
 func set_value(v: float) -> void:
 	_slider.value = v
+	_refresh(v)
+
+## يُعيد قراءة القيمة من الإعدادات — بعد إعادة الضبط مثلاً
+func refresh_from_settings() -> void:
+	var v := float(Settings.get_value(key))
+	_slider.set_value_no_signal(v)
 	_refresh(v)

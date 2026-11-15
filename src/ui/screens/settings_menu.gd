@@ -60,9 +60,65 @@ func _ready() -> void:
 		"time_of_day", "وقت اليوم",
 		Daylight.KEYS, Daylight.LABELS, "◐")))
 
+	col.add_child(_header("الرسومات"))
+
+	# الإعداد الجاهز يضبط الباقي دفعة واحدة؛ أي تعديل يدوي بعده
+	# ينقل الإعداد إلى «مخصص» تلقائياً.
 	_rows.append(_add(col, OptionCycler.new(
-		"graphics_quality", "جودة الرسومات",
-		["low", "medium", "high"], ["منخفضة", "متوسطة", "عالية"], "✦")))
+		"gfx_preset", "تفضيلات الرسومات",
+		["custom", "fps", "balanced", "quality"],
+		["مخصص", "معدل إطارات أفضل", "متوازنة", "رسومات أفضل"], "✧")))
+
+	_rows.append(_add(col, OptionCycler.new(
+		"gfx_quality", "الرسومات",
+		Graphics.QUALITY_ORDER,
+		Graphics.QUALITY_ORDER.map(func(k): return Graphics.quality_label(k)), "✦")))
+
+	_rows.append(_add(col, OptionCycler.new(
+		"gfx_fps_tier", "إعدادات معدل الإطارات",
+		Graphics.FPS_ORDER,
+		Graphics.FPS_ORDER.map(func(k): return Graphics.fps_label(k)), "⏱")))
+
+	_rows.append(_add(col, OptionCycler.new(
+		"gfx_fps_manual", "تعديل معدّل الإطارات",
+		[false, true], ["ضبط ذكي", "ضبط يدوي"], "⚙")))
+
+	_rows.append(_add(col, SettingSlider.new("gfx_fps_cap", "معدل الإطارات", "▦",
+		20.0, 120.0, 1.0)))
+
+	_rows.append(_add(col, OptionCycler.new(
+		"gfx_style", "نمط الرسوم",
+		Graphics.STYLE_ORDER,
+		Graphics.STYLE_ORDER.map(func(k): return Graphics.style_label(k)), "◈")))
+
+	col.add_child(_header("إعدادات الرسومات المتقدمة"))
+
+	_rows.append(_add(col, OptionCycler.new(
+		"gfx_adaptive", "الرسومات التكيفية",
+		[true, false], ["تفعيل", "تعطيل"], "⟳")))
+	_rows.append(_add(col, OptionCycler.new(
+		"gfx_shadows", "الظلال",
+		[true, false], ["تفعيل", "تعطيل"], "◗")))
+	_rows.append(_add(col, OptionCycler.new(
+		"gfx_antialiasing", "تنعيم الحواف",
+		[true, false], ["تفعيل", "تعطيل"], "◍")))
+	_rows.append(_add(col, OptionCycler.new(
+		"gfx_power_save", "توفير الطاقة",
+		[false, true], ["تعطيل", "تفعيل"], "⚡")))
+
+	_rows.append(_add(col, OptionCycler.new(
+		"gfx_colorblind", "وضع عمى الألوان",
+		Graphics.CB_ORDER,
+		Graphics.CB_ORDER.map(func(k): return str(Graphics.CB_LABEL[k])), "◉")))
+
+	_rows.append(_add(col, SettingSlider.new("ui_safe_area",
+		"واجهة الشاشات غير القياسية", "▭", 0.0, 1.0, 0.05)))
+
+	col.add_child(_separator())
+
+	_rows.append(_add(col, OptionCycler.new(
+		"graphics_quality", "تفصيل العالم",
+		["low", "medium", "high"], ["منخفض", "متوسط", "عالٍ"], "✣")))
 	_rows.append(_add(col, OptionCycler.new(
 		"language", "اللغة",
 		["ar", "en"], ["العربية", "English"], "⌘")))
@@ -86,6 +142,11 @@ func _ready() -> void:
 	actions.alignment = BoxContainer.ALIGNMENT_CENTER
 	actions.add_theme_constant_override("separation", 18)
 	col.add_child(actions)
+
+	var reset_gfx := Button.new()
+	reset_gfx.text = "إعادة ضبط الرسومات"
+	reset_gfx.pressed.connect(_on_reset_graphics)
+	actions.add_child(reset_gfx)
 
 	var apply := Button.new()
 	apply.text = "تطبيق"
@@ -172,3 +233,14 @@ func _flash(msg: String) -> void:
 	var tw := create_tween()
 	tw.tween_property(l, "modulate:a", 0.0, 1.4).set_delay(0.6)
 	tw.tween_callback(l.queue_free)
+
+## يعيد مفاتيح الرسومات وحدها إلى الافتراضي، ولا يمسّ الصوت
+## ولا التحكّم ولا الحفظ — وهو ما يفعله الزرّ في الصورة المرجعية.
+func _on_reset_graphics() -> void:
+	for k in Settings.DEFAULTS:
+		if str(k).begins_with("gfx_") or k == "ui_safe_area" or k == "brightness":
+			Settings.set_value(k, Settings.DEFAULTS[k])
+	Settings.save_settings()
+	for r in _rows:
+		if r.has_method("refresh_from_settings"):
+			r.refresh_from_settings()

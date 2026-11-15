@@ -204,7 +204,9 @@ static func apply(env: Environment, sun: DirectionalLight3D, key: String, bright
 	env.fog_depth_begin = float(p["fog_begin"])
 	env.fog_depth_end = float(p["fog_end"])
 	env.fog_sky_affect = float(p["sky_affect"])
-	env.tonemap_exposure = float(p["exposure"]) * exposure_multiplier(brightness01)
+	# نمط الرسوم يضرب التعريض أيضاً: «سينمائي» أغمق و«ناعم» أفتح
+	var style_exp := float(env.get_meta("style_exposure", 1.0))
+	env.tonemap_exposure = float(p["exposure"]) * exposure_multiplier(brightness01) * style_exp
 	env.adjustment_saturation = float(p["saturation"])
 
 	# الضباب الحجمي: هو مصدر أعمدة الضوء بين الأشجار. غير مدعوم في

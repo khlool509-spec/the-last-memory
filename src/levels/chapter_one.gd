@@ -127,6 +127,9 @@ func _build_environment() -> void:
 	_sun.directional_shadow_blend_splits = true
 	add_child(_sun)
 
+	# ربط مدير الرسومات بالبيئة والشمس: من هنا تصير إعدادات
+	# الجودة والظلال والنمط تغييرات حقيقية في هذا المشهد.
+	Graphics.bind_world(_env, _sun)
 	_apply_daylight()
 	Settings.changed.connect(func(key: String, _v: Variant) -> void:
 		if key == "time_of_day" or key == "brightness":
