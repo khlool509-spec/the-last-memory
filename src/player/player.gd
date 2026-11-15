@@ -45,6 +45,7 @@ var stamina: float = 100.0
 var _gravity: float = 9.8
 var _was_on_floor: bool = true
 var rig: CharacterRig = null          # الشخصية المفصليّة، تُركَّب من المرحلة
+var model: CharacterModel = null      # مجسّم مرخّص مجهّز، إن وُجد
 var _fire_cd := 0.0
 var _step_accum: float = 0.0
 ## السطح الذي يقف عليه: تحدّثه المرحلة، ويغيّر صوت الخطوة
@@ -186,14 +187,18 @@ func _physics_process(delta: float) -> void:
 		rotation.y = lerp_angle(rotation.y, want, clampf(turn_speed * delta, 0.0, 1.0))
 
 	# تحريك الشخصية: الحالة والسرعة تقودان الوضع، فلا جداول تحريك
-	if rig:
-		var hspd := Vector2(velocity.x, velocity.z).length()
+	var hspd := Vector2(velocity.x, velocity.z).length()
+	if model:
+		model.play_state(state_label(), hspd, is_aiming)
+	elif rig:
 		rig.pose(state_label(), hspd, delta, is_aiming)
 	if is_firing:
 		_fire_cd -= delta
 		if _fire_cd <= 0.0:
 			_fire_cd = 0.11            # ‎≈545 طلقة/دقيقة
-			if rig:
+			if model:
+				model.fire_once()
+			elif rig:
 				rig.recoil()
 			fired.emit()
 	else:

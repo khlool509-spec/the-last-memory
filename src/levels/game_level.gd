@@ -47,9 +47,20 @@ func _build_player() -> void:
 
 	# شخصية بشرية مفصليّة بدل الكبسولة. الجنس يُقرأ من الإعدادات،
 	# ويُختار من شاشة ما قبل اللعب.
-	var rig := CharacterRig.create(str(Settings.get_value("character_gender")))
-	player.add_child(rig)
-	player.set("rig", rig)
+	# أولوية المجسّم المرخّص إن وُجد، والمفصلي احتياطاً. هكذا يكفي
+	# إسقاط ملف ‎.glb في المجلّد ليحلّ محلّ الشخصية بلا تعديل كود.
+	var gender := str(Settings.get_value("character_gender"))
+	var model := CharacterModel.new()
+	model.name = "Model"
+	player.add_child(model)
+	var glb := "res://assets/models/characters/%s.glb" % gender
+	if model.load_model(glb, 1.80 if gender == "male" else 1.68):
+		player.set("model", model)
+	else:
+		model.queue_free()
+		var rig := CharacterRig.create(gender)
+		player.add_child(rig)
+		player.set("rig", rig)
 
 	var shape := CollisionShape3D.new()
 	shape.name = "Collider"        # باسمه يجده تبديل الوضع ليغيّر الارتفاع
