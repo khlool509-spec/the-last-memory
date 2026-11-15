@@ -215,11 +215,11 @@ jobs:
           path: build/android/the_last_memory.apk
           retention-days: 90
 
-      - name: نشر الـ APK في فرع التنزيل المباشر
-        # تنزيل Artifacts يمر عبر رابط مؤقت من مخزن خارجي، وقد ينقطع
-        # على اتصال الهاتف. حدث ذلك فعلاً: وصل 35% من الملف فقط.
-        # الملف في فرع عادي يُخدَم عبر شبكة GitHub نفسها، ويدعم
-        # الاستئناف، ويُنزَّل كـ .apk مباشرة بلا تغليف ZIP.
+      - name: نشر الـ APK في إصدار متجدّد
+        # الفرع العادي يرفض أكثر من 100 ميغابايت (GH001)، وهو ما كان
+        # يُفشل كل بناء منذ أن تجاوز الـAPK هذا الحدّ. إصدارات GitHub
+        # تقبل حتى 2 غيغابايت للملف الواحد، وتُخدَم برابط مباشر ثابت
+        # يدعم الاستئناف — وهو ما يلزم للتنزيل على الجوال.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -228,41 +228,24 @@ jobs:
           SHA=$(sha256sum "$APK" | cut -d' ' -f1)
           SIZE=$(stat -c%s "$APK")
           VER=$(tr -d ' \n\r' < VERSION 2>/dev/null || echo "0.0.0")
-          rm -rf /tmp/pub && mkdir -p /tmp/pub
-          cp "$APK" /tmp/pub/the_last_memory.apk
-          echo "$SHA  the_last_memory.apk" > /tmp/pub/the_last_memory.apk.sha256
-          {
-            echo "# نسخة التنزيل المباشر"
-            echo
-            echo "| | |"
-            echo "|---|---|"
-            echo "| الإصدار | $VER |"
-            echo "| الالتزام | ${GITHUB_SHA:0:7} |"
-            echo "| التاريخ | $(date -u '+%Y-%m-%d %H:%M UTC') |"
-            echo "| الحجم | $SIZE بايت |"
-            echo "| SHA256 | \`$SHA\` |"
-            echo
-            echo "## تحقق من اكتمال التنزيل"
-            echo
-            echo "قارن حجم الملف بعد التنزيل بالرقم أعلاه."
-            echo "اختلاف الحجم يعني أن التنزيل انقطع — أعد التنزيل."
-          } > /tmp/pub/README.md
-          cd /tmp/pub
-          git init -q -b builds
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -q -m "APK من الالتزام ${GITHUB_SHA:0:7} — $SIZE بايت"
-          git push -q --force \
-            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" builds
+          TAG="latest-build"
+          NOTES=$(printf '%s\n' \
+            "الإصدار: $VER" \
+            "الالتزام: ${GITHUB_SHA:0:7}" \
+            "التاريخ: $(date -u '+%Y-%m-%d %H:%M UTC')" \
+            "الحجم: $SIZE بايت" \
+            "SHA256: $SHA")
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$TAG" "$APK" \
+            --title "آخر بناء — $VER (${GITHUB_SHA:0:7})" \
+            --notes "$NOTES" --latest
           {
             echo "## رابط التنزيل المباشر"
             echo
-            echo "https://github.com/${GITHUB_REPOSITORY}/raw/builds/the_last_memory.apk"
+            echo "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/the_last_memory.apk"
             echo
-            echo "- الحجم المتوقع: **$SIZE** بايت"
+            echo "- الحجم: **$SIZE** بايت"
             echo "- SHA256: \`$SHA\`"
           } >> "$GITHUB_STEP_SUMMARY"
           echo "الحجم: $SIZE"
           echo "SHA256: $SHA"
-

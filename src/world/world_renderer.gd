@@ -263,12 +263,11 @@ func _build_water() -> void:
 			smooth.append(_catmull(p0, p1, p2, p3, t))
 	smooth.append(pts[pts.size() - 1])
 
-	# عموديّ المفصل: عمودي كل نقطة هو متوسط عموديّ الضلعين المجاورين.
-	# بعمودي ضلع واحد تنفرج الحافّة الخارجية عند المنعطفات فتخرج من
-	# المجرى المنحوت، فتبرز التضاريس خلال اللوح بأسافين مثلثة.
+	# عموديّ المفصل: عمودي كل نقطة هو متوسط عموديّ الضلعين المجاورين،
+	# وإلا انفرجت الحافّة الخارجية عند المنعطفات.
 	var norms := PackedVector2Array()
 	var widths := PackedFloat32Array()
-	var lim := WorldProfile.RIVER_HALF_WIDTH - 0.45
+	var levels := PackedFloat32Array()
 	var n_pts := smooth.size()
 	for i in n_pts:
 		var prev: Vector2 = smooth[maxi(i - 1, 0)]
@@ -283,15 +282,21 @@ func _build_water() -> void:
 		if nn.length() < 0.001:
 			nn = d_out.normalized().orthogonal()
 		norms.append(nn.normalized())
-		# انعطاف حادّ ⇒ عرض أقل، وإلا تجاوزت الحافّة الخارجية المجرى
 		var turn := absf(d_in.normalized().angle_to(d_out.normalized()))
-		var narrow := clampf(1.0 - turn * 1.15, 0.52, 1.0)
+		# اللوح يتجاوز المجرى إلى الضفة عمداً: الشاطئ يُرسَم بالشفافية
+		# حسب العمق لا بحافّة الشبكة. بلوح أضيق من المجرى كانت حافّته
+		# المستقيمة تُرى ويظهر القاع بجانبها.
+		var narrow := clampf(1.0 - turn * 0.85, 0.66, 1.0)
 		var f := float(i) / float(n_pts - 1)
-		widths.append(minf(lerpf(3.6, 4.8, f), lim) * narrow)
+		widths.append(lerpf(5.5, 6.3, f) * narrow)
+		# سطح النهر ينحدر مع مجراه كما ينحدر قاعه. السطح المستوي
+		# عند ارتفاع واحد فوق وادٍ منحدر يُقرأ لوحاً مقصوصاً.
+		levels.append(data.water_level + lerpf(0.26, -0.34, f))
 
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var y := data.water_level
+	# تقسيم عرضي: الموج الهندسي في شادر القمم يحتاج قممًا ليحرّكها
+	var cols := 7
 	for i in n_pts - 1:
 		var a := smooth[i]
 		var b := smooth[i + 1]
@@ -301,20 +306,21 @@ func _build_water() -> void:
 		var f1 := float(i + 1) / float(n_pts - 1)
 		var w0 := widths[i]
 		var w1 := widths[i + 1]
-		var a0 := Vector3(a.x - na.x * w0, y, a.y - na.y * w0)
-		var a1 := Vector3(a.x + na.x * w0, y, a.y + na.y * w0)
-		var b0 := Vector3(b.x - nb.x * w1, y, b.y - nb.y * w1)
-		var b1 := Vector3(b.x + nb.x * w1, y, b.y + nb.y * w1)
-		# اتجاه الجريان وسرعته يُخبزان في ألوان القمم:
-		#   rg = اتجاه التيار في المستوى الأفقي (0..1 حول 0.5)
-		#   b  = السرعة (تزيد في المضائق وتقلّ في الاتّساع)
-		#   a  = القرب من المحور (1 وسط المجرى، 0 عند الضفة) للرغوة
+		var y0 := levels[i]
+		var y1 := levels[i + 1]
 		var dir_a := (smooth[mini(i + 1, n_pts - 1)] - smooth[maxi(i - 1, 0)]).normalized()
 		var dir_b := (smooth[mini(i + 2, n_pts - 1)] - smooth[i]).normalized()
-		# المضيق يسرّع الماء: السرعة عكس العرض
-		var sp_a := clampf(4.6 / maxf(w0, 0.6), 0.35, 1.0)
-		var sp_b := clampf(4.6 / maxf(w1, 0.6), 0.35, 1.0)
-		_wquad(st, a0, a1, b1, b0, f0, f1, dir_a, dir_b, sp_a, sp_b)
+		var sp_a := clampf(5.5 / maxf(w0, 0.6), 0.35, 1.0)
+		var sp_b := clampf(5.5 / maxf(w1, 0.6), 0.35, 1.0)
+		for c in cols:
+			var u0 := float(c) / float(cols)
+			var u1 := float(c + 1) / float(cols)
+			var p00 := _wpt(a, na, w0, y0, u0)
+			var p10 := _wpt(a, na, w0, y0, u1)
+			var p01 := _wpt(b, nb, w1, y1, u0)
+			var p11 := _wpt(b, nb, w1, y1, u1)
+			_wquad2(st, p00, p10, p11, p01, f0, f1, u0, u1, dir_a, dir_b, sp_a, sp_b)
+
 	st.generate_normals()
 	st.generate_tangents()
 	var mi := MeshInstance3D.new()
@@ -322,19 +328,33 @@ func _build_water() -> void:
 	mi.mesh = st.commit()
 	mi.material_override = WorldMaterials.water()
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# الموج الهندسي يزيح القمم في الشادر، فحدود الشبكة الأصلية
+	# تصير أصغر مما يُرسَم فعلاً ويُقصّ السطح عند حوافّ الشاشة.
+	mi.extra_cull_margin = 2.0
 	water_root.add_child(mi)
 
-func _wquad(st: SurfaceTool, a0: Vector3, a1: Vector3, b1: Vector3, b0: Vector3,
-		f0: float, f1: float, da: Vector2, db: Vector2, sa: float, sb: float) -> void:
-	# الحافّة (u=0 أو 1) قرب الضفة فـalpha=0؛ ويُحسب الوسط بالقناة a
-	var ca := Color(da.x * 0.5 + 0.5, da.y * 0.5 + 0.5, sa, 0.0)
-	var cb := Color(db.x * 0.5 + 0.5, db.y * 0.5 + 0.5, sb, 0.0)
-	st.set_color(ca); st.set_uv(Vector2(0.0, f0 * 42.0)); st.add_vertex(a0)
-	st.set_color(ca); st.set_uv(Vector2(1.0, f0 * 42.0)); st.add_vertex(a1)
-	st.set_color(cb); st.set_uv(Vector2(1.0, f1 * 42.0)); st.add_vertex(b1)
-	st.set_color(ca); st.set_uv(Vector2(0.0, f0 * 42.0)); st.add_vertex(a0)
-	st.set_color(cb); st.set_uv(Vector2(1.0, f1 * 42.0)); st.add_vertex(b1)
-	st.set_color(cb); st.set_uv(Vector2(0.0, f1 * 42.0)); st.add_vertex(b0)
+## نقطة على عرض المجرى: u=0 ضفّة، u=0.5 محور، u=1 الضفّة الأخرى
+func _wpt(c: Vector2, nrm: Vector2, w: float, y: float, u: float) -> Vector3:
+	var off := (u - 0.5) * 2.0 * w
+	return Vector3(c.x + nrm.x * off, y, c.y + nrm.y * off)
+
+func _wquad2(st: SurfaceTool, p00: Vector3, p10: Vector3, p11: Vector3, p01: Vector3,
+		f0: float, f1: float, u0: float, u1: float,
+		da: Vector2, db: Vector2, sa: float, sb: float) -> void:
+	# ألوان القمم: rg الاتجاه، b السرعة، a القرب من المحور (للرغوة
+	# والموج الهندسي — كلاهما أقوى في الوسط وأضعف عند الضفة)
+	var m0 := 1.0 - absf(u0 - 0.5) * 2.0
+	var m1 := 1.0 - absf(u1 - 0.5) * 2.0
+	var c00 := Color(da.x * 0.5 + 0.5, da.y * 0.5 + 0.5, sa, m0)
+	var c10 := Color(da.x * 0.5 + 0.5, da.y * 0.5 + 0.5, sa, m1)
+	var c01 := Color(db.x * 0.5 + 0.5, db.y * 0.5 + 0.5, sb, m0)
+	var c11 := Color(db.x * 0.5 + 0.5, db.y * 0.5 + 0.5, sb, m1)
+	st.set_color(c00); st.set_uv(Vector2(u0, f0 * 42.0)); st.add_vertex(p00)
+	st.set_color(c10); st.set_uv(Vector2(u1, f0 * 42.0)); st.add_vertex(p10)
+	st.set_color(c11); st.set_uv(Vector2(u1, f1 * 42.0)); st.add_vertex(p11)
+	st.set_color(c00); st.set_uv(Vector2(u0, f0 * 42.0)); st.add_vertex(p00)
+	st.set_color(c11); st.set_uv(Vector2(u1, f1 * 42.0)); st.add_vertex(p11)
+	st.set_color(c01); st.set_uv(Vector2(u0, f1 * 42.0)); st.add_vertex(p01)
 
 static func _catmull(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, t: float) -> Vector2:
 	var t2 := t * t
