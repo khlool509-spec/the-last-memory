@@ -39,6 +39,10 @@ func _ready() -> void:
 	_build_collision()
 	_build_scatter()
 	_build_water()
+	# الجيولوجيا: تشكيلات ممسوحة ضوئياً فوق حقل الارتفاع.
+	# حقل الارتفاع أحاديّ القيمة فلا يُنتج جرفاً عمودياً؛ هذه تفعل.
+	if bool(Settings.get_value("show_geology")):
+		geology_count = Geology.build(self, WorldProfile.new(), self)
 
 # ---------------- الأرض ----------------
 func _build_terrain() -> void:
@@ -101,6 +105,8 @@ const FADE := 6.0
 ## مضاعف المسافات حسب إعداد الجودة
 var quality_scale: float = 1.0
 var vegetation_hidden: bool = false
+## عدد الكتل الجيولوجية المُركَّبة — تقرؤه الاختبارات
+var geology_count: int = 0
 
 func _build_scatter() -> void:
 	scatter_root = Node3D.new()

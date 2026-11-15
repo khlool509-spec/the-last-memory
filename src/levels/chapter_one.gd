@@ -5,6 +5,8 @@ extends GameLevel
 
 var world: WorldRenderer
 var _sun: DirectionalLight3D
+## كم عقدة أُزيلت بالدمج — تقرؤها الاختبارات والمسبار
+var merged_nodes: int = 0
 var _env: Environment
 var _lamps: Array[OmniLight3D] = []
 var _glows: Array[MeshInstance3D] = []
@@ -250,6 +252,19 @@ func place_contents() -> void:
 	_place_story_items()
 	_place_doors()
 	_place_triggers()
+	# دمج أشكال البناء الساكنة قبل مستويات التفصيل: 302 عقدة مقابل
+	# 21,880 مثلثاً — الكلفة في عدد الاستدعاءات لا في الهندسة.
+	# يُنفَّذ قبل Lod.apply ليأخذ الناتج المدموج نطاقات الرؤية.
+	var merged := 0
+	if bool(Settings.get_value("merge_statics")):
+		for bn in ["Landmarks", "Bridges"]:
+			var br := get_node_or_null(bn)
+			if br:
+				for b in br.get_children():
+					if b is Node3D:
+						merged += MeshMerge.merge_subtree(b)
+	merged_nodes = merged
+
 	# مستويات التفصيل على كل ما بُني: مبانٍ وجسور ومعالم وما يُضاف لاحقاً
 	var qs := Lod.scale_for_quality(str(Settings.get_value("graphics_quality")))
 	var touched := 0

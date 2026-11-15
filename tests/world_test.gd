@@ -114,6 +114,53 @@ func _test_structure() -> void:
 		flipped == 0, "%d مثلثاً مقلوباً — الأرض ستختفي" % flipped)
 
 func _test_data_integrity() -> void:
+	print("\n[الجيولوجيا والدمج]")
+	# حقل الارتفاع أحاديّ القيمة فلا يُنتج جرفاً؛ الكتل الممسوحة تفعل.
+	var geo: Node = world.get_node_or_null("Geology")
+	if bool(Settings.get_value("show_geology")):
+		_true("عقدة الجيولوجيا موجودة", geo != null)
+		var gn := geo.get_child_count() if geo else 0
+		_true("كتل جيولوجية مُركَّبة (%d)" % gn, gn >= 100,
+			"المتوقَّع ≥100 كتلة، وُجد %d" % gn)
+		var faces := 0
+		var mossy := 0
+		var no_mesh := 0
+		var no_range := 0
+		if geo:
+			for c in geo.get_children():
+				var nm := str(c.name)
+				if nm.begins_with("rock_face"):
+					faces += 1
+				elif nm.begins_with("rock_moss"):
+					mossy += 1
+				var mi := c as MeshInstance3D
+				if mi == null or mi.mesh == null:
+					no_mesh += 1
+				elif mi.visibility_range_end <= 0.0:
+					no_range += 1
+		_true("أوجه جروف موضوعة (%d)" % faces, faces >= 10,
+			"عتبة الميل لا تلتقط المنحدرات الحادّة")
+		_true("كتل بطحلب موضوعة (%d)" % mossy, mossy >= 30)
+		_true("كل كتلة تحمل شبكة", no_mesh == 0, "%d بلا شبكة" % no_mesh)
+		_true("كل كتلة لها نطاق رؤية", no_range == 0,
+			"%d بلا نطاق — تُرسم إلى ما لا نهاية" % no_range)
+	else:
+		_true("الجيولوجيا مُطفأة فلا عقدة", geo == null or geo.get_child_count() == 0)
+
+	# بيان النماذج: المصدر والترخيص لكل كتلة
+	var mm := "res://assets/models/MANIFEST.json"
+	_true("بيان النماذج موجود", FileAccess.file_exists(mm), mm)
+	if FileAccess.file_exists(mm):
+		var md: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(mm))
+		var miss := 0
+		for k in md:
+			if str((md[k] as Dictionary).get("license", "")) != "CC0 1.0":
+				miss += 1
+			if not ResourceLoader.exists("res://" + str((md[k] as Dictionary)["path"])):
+				miss += 1
+		_true("كل النماذج مستوردة وتراخيصها معلومة (%d)" % md.size(), miss == 0,
+			"%d مشكلة" % miss)
+
 	print("\n[خامات PBR الخارجية]")
 	# لا يكفي أن تُنزَّل الملفات: يجب أن تُحمَّل فعلاً وتُربَط بالشادر.
 	# هذا الاختبار يفشل إذا فُقد ملف أو لم يُستورد أو لم يُمرَّر.

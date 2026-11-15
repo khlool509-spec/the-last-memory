@@ -19,6 +19,8 @@ const DEFAULTS := {
 	"brightness": 0.5,
 	"show_vegetation": false,
 	"show_rocks": true,
+	"show_geology": true,
+	"merge_statics": true,
 	"invert_y": false,
 	"show_fps": false,
 	"vibration": true,

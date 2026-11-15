@@ -1,0 +1,115 @@
+{
+  "rock_moss_set_01": {
+    "source": "https://polyhaven.com/a/rock_moss_set_01",
+    "license": "CC0 1.0",
+    "license_url": "https://polyhaven.com/license",
+    "authors": {
+      "Kless Gyzen": "All"
+    },
+    "categories": [
+      "rocks",
+      "nature",
+      "collection: pine_forest"
+    ],
+    "resolution": "2k",
+    "path": "assets/models/rock_moss_set_01/rock_moss_set_01.gltf",
+    "bytes": 3260566
+  },
+  "rock_moss_set_02": {
+    "source": "https://polyhaven.com/a/rock_moss_set_02",
+    "license": "CC0 1.0",
+    "license_url": "https://polyhaven.com/license",
+    "authors": {
+      "Kless Gyzen": "All"
+    },
+    "categories": [
+      "rocks",
+      "nature",
+      "collection: pine_forest"
+    ],
+    "resolution": "2k",
+    "path": "assets/models/rock_moss_set_02/rock_moss_set_02.gltf",
+    "bytes": 3581402
+  },
+  "rock_face_01": {
+    "source": "https://polyhaven.com/a/rock_face_01",
+    "license": "CC0 1.0",
+    "license_url": "https://polyhaven.com/license",
+    "authors": {
+      "Dario Barresi": "All"
+    },
+    "categories": [
+      "rocks",
+      "nature",
+      "collection: verdant_trail"
+    ],
+    "resolution": "2k",
+    "path": "assets/models/rock_face_01/rock_face_01.gltf",
+    "bytes": 10209699
+  },
+  "rock_face_02": {
+    "source": "https://polyhaven.com/a/rock_face_02",
+    "license": "CC0 1.0",
+    "license_url": "https://polyhaven.com/license",
+    "authors": {
+      "Dario Barresi": "All",
+      "Rico Cilliers": "processing"
+    },
+    "categories": [
+      "rocks",
+      "nature",
+      "collection: verdant_trail"
+    ],
+    "resolution": "2k",
+    "path": "assets/models/rock_face_02/rock_face_02.gltf",
+    "bytes": 11101897
+  },
+  "boulder_01": {
+    "source": "https://polyhaven.com/a/boulder_01",
+    "license": "CC0 1.0",
+    "license_url": "https://polyhaven.com/license",
+    "authors": {
+      "Rico Cilliers": "All"
+    },
+    "categories": [
+      "rocks",
+      "nature",
+      "collection: verdant_trail"
+    ],
+    "resolution": "2k",
+    "path": "assets/models/boulder_01/boulder_01.gltf",
+    "bytes": 13536339
+  },
+  "rock_07": {
+    "source": "https://polyhaven.com/a/rock_07",
+    "license": "CC0 1.0",
+    "license_url": "https://polyhaven.com/license",
+    "authors": {
+      "Jenelle van Heerden": "All"
+    },
+    "categories": [
+      "rocks",
+      "nature",
+      "collection: verdant_trail"
+    ],
+    "resolution": "2k",
+    "path": "assets/models/rock_07/rock_07.gltf",
+    "bytes": 6310908
+  },
+  "rock_09": {
+    "source": "https://polyhaven.com/a/rock_09",
+    "license": "CC0 1.0",
+    "license_url": "https://polyhaven.com/license",
+    "authors": {
+      "Jenelle van Heerden": "All"
+    },
+    "categories": [
+      "nature",
+      "rocks",
+      "collection: verdant_trail"
+    ],
+    "resolution": "2k",
+    "path": "assets/models/rock_09/rock_09.gltf",
+    "bytes": 5820522
+  }
+}
