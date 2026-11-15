@@ -266,14 +266,21 @@ func _test_daylight() -> void:
 	# النهار صار يستعمل سماء HDRI مصوّرة، والليل يبقى إجرائياً.
 	# فالاختبار يتحقّق من تبديل نوع السماء لا من لون مادة إجرائية
 	# لم تعد موجودة في النهار.
-	_true("النهار يبدّل السماء إلى HDRI مصوّرة",
-		env.sky.sky_material is PanoramaSkyMaterial,
-		"النوع: " + env.sky.sky_material.get_class())
-	_true("وصورة السماء محمّلة",
-		(env.sky.sky_material as PanoramaSkyMaterial).panorama != null)
+	# السماء الحيّة: شادر يجمع كرة HDRI مصوّرة وطبقتَي غيوم متحرّكتين.
+	# PanoramaSkyMaterial وحدها ساكنة، فاستُبدلت بشادر يحمل الصورة.
+	var day_sky := env.sky.sky_material
+	_true("النهار يستعمل شادر السماء الحيّة",
+		day_sky is ShaderMaterial and (day_sky as ShaderMaterial).shader != null
+		and str((day_sky as ShaderMaterial).shader.resource_path).ends_with("sky_hdri_clouds.gdshader"),
+		"النوع: " + day_sky.get_class())
+	_true("وصورة الـHDRI مربوطة بالشادر",
+		(day_sky as ShaderMaterial).get_shader_parameter("panorama") is Texture2D)
+	_true("والغيوم لها كمّية موجبة",
+		float((day_sky as ShaderMaterial).get_shader_parameter("cloud_amount")) > 0.0)
 	Daylight.apply(env, sun, "night", 0.5)
 	_true("والليل يعود إلى السماء الإجرائية",
-		env.sky.sky_material is ShaderMaterial or env.sky.sky_material is ProceduralSkyMaterial,
+		env.sky.sky_material is ShaderMaterial
+		and not str((env.sky.sky_material as ShaderMaterial).shader.resource_path).ends_with("sky_hdri_clouds.gdshader"),
 		"النوع: " + env.sky.sky_material.get_class())
 	Daylight.apply(env, sun, "day", 0.5)
 	_true("لون سماء الليل كان أغمق (مرجع %.2f)" % night_top.v, night_top.v < 0.35)

@@ -305,7 +305,16 @@ func _build_water() -> void:
 		var a1 := Vector3(a.x + na.x * w0, y, a.y + na.y * w0)
 		var b0 := Vector3(b.x - nb.x * w1, y, b.y - nb.y * w1)
 		var b1 := Vector3(b.x + nb.x * w1, y, b.y + nb.y * w1)
-		_wquad(st, a0, a1, b1, b0, f0, f1)
+		# اتجاه الجريان وسرعته يُخبزان في ألوان القمم:
+		#   rg = اتجاه التيار في المستوى الأفقي (0..1 حول 0.5)
+		#   b  = السرعة (تزيد في المضائق وتقلّ في الاتّساع)
+		#   a  = القرب من المحور (1 وسط المجرى، 0 عند الضفة) للرغوة
+		var dir_a := (smooth[mini(i + 1, n_pts - 1)] - smooth[maxi(i - 1, 0)]).normalized()
+		var dir_b := (smooth[mini(i + 2, n_pts - 1)] - smooth[i]).normalized()
+		# المضيق يسرّع الماء: السرعة عكس العرض
+		var sp_a := clampf(4.6 / maxf(w0, 0.6), 0.35, 1.0)
+		var sp_b := clampf(4.6 / maxf(w1, 0.6), 0.35, 1.0)
+		_wquad(st, a0, a1, b1, b0, f0, f1, dir_a, dir_b, sp_a, sp_b)
 	st.generate_normals()
 	st.generate_tangents()
 	var mi := MeshInstance3D.new()
@@ -315,13 +324,17 @@ func _build_water() -> void:
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	water_root.add_child(mi)
 
-func _wquad(st: SurfaceTool, a0: Vector3, a1: Vector3, b1: Vector3, b0: Vector3, f0: float, f1: float) -> void:
-	st.set_uv(Vector2(0.0, f0 * 42.0)); st.add_vertex(a0)
-	st.set_uv(Vector2(1.0, f0 * 42.0)); st.add_vertex(a1)
-	st.set_uv(Vector2(1.0, f1 * 42.0)); st.add_vertex(b1)
-	st.set_uv(Vector2(0.0, f0 * 42.0)); st.add_vertex(a0)
-	st.set_uv(Vector2(1.0, f1 * 42.0)); st.add_vertex(b1)
-	st.set_uv(Vector2(0.0, f1 * 42.0)); st.add_vertex(b0)
+func _wquad(st: SurfaceTool, a0: Vector3, a1: Vector3, b1: Vector3, b0: Vector3,
+		f0: float, f1: float, da: Vector2, db: Vector2, sa: float, sb: float) -> void:
+	# الحافّة (u=0 أو 1) قرب الضفة فـalpha=0؛ ويُحسب الوسط بالقناة a
+	var ca := Color(da.x * 0.5 + 0.5, da.y * 0.5 + 0.5, sa, 0.0)
+	var cb := Color(db.x * 0.5 + 0.5, db.y * 0.5 + 0.5, sb, 0.0)
+	st.set_color(ca); st.set_uv(Vector2(0.0, f0 * 42.0)); st.add_vertex(a0)
+	st.set_color(ca); st.set_uv(Vector2(1.0, f0 * 42.0)); st.add_vertex(a1)
+	st.set_color(cb); st.set_uv(Vector2(1.0, f1 * 42.0)); st.add_vertex(b1)
+	st.set_color(ca); st.set_uv(Vector2(0.0, f0 * 42.0)); st.add_vertex(a0)
+	st.set_color(cb); st.set_uv(Vector2(1.0, f1 * 42.0)); st.add_vertex(b1)
+	st.set_color(cb); st.set_uv(Vector2(0.0, f1 * 42.0)); st.add_vertex(b0)
 
 static func _catmull(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, t: float) -> Vector2:
 	var t2 := t * t

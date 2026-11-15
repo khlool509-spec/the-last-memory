@@ -139,22 +139,33 @@ static func apply(env: Environment, sun: DirectionalLight3D, key: String, bright
 	# إضاءة عامّة صحيحة بلا خبز، ولهذا تُفضَّل على السماء الإجرائية
 	# في الأوقات التي لها HDRI. الليل يبقى إجرائياً.
 	var hdri_name := str(p.get("hdri", ""))
+	# علَم: السماء الحيّة تضبط بارامتراتها بنفسها، فلا تمرّ على
+	# فرع السماء الإجرائية أدناه (بارامتراته مختلفة تماماً).
+	var live_sky := false
 	if env.sky and hdri_name != "":
+		# السماء الحيّة: كرة HDRI تحمل الإضاءة، وفوقها طبقتا غيوم
+		# متحرّكتان. السماء الساكنة ميتة مهما حسُنت صورتها.
 		var path := "res://assets/hdri/" + hdri_name
-		var need_swap := not (env.sky.sky_material is PanoramaSkyMaterial)
-		var pano: PanoramaSkyMaterial
-		if need_swap:
-			pano = PanoramaSkyMaterial.new()
-			pano.filter = true
-			env.sky.sky_material = pano
+		var sm2: ShaderMaterial
+		var sh2: Shader = ResourceLoader.load("res://assets/shaders/sky_hdri_clouds.gdshader")
+		if env.sky.sky_material is ShaderMaterial \
+				and (env.sky.sky_material as ShaderMaterial).shader == sh2:
+			sm2 = env.sky.sky_material as ShaderMaterial
 		else:
-			pano = env.sky.sky_material as PanoramaSkyMaterial
+			sm2 = ShaderMaterial.new()
+			sm2.shader = sh2
+			env.sky.sky_material = sm2
 		if ResourceLoader.exists(path):
-			var tex: Texture2D = ResourceLoader.load(path)
-			if pano.panorama != tex:
-				pano.panorama = tex
-		pano.energy_multiplier = float(p.get("hdri_energy", 1.0))
-	elif env.sky and hdri_name == "" and env.sky.sky_material is PanoramaSkyMaterial:
+			sm2.set_shader_parameter("panorama", ResourceLoader.load(path))
+		sm2.set_shader_parameter("pano_energy", float(p.get("hdri_energy", 1.0)))
+		sm2.set_shader_parameter("sun_color", p["sun_color"])
+		sm2.set_shader_parameter("cloud_amount", float(p.get("clouds", 0.46)))
+		sm2.set_shader_parameter("cloud_lit", p.get("cloud_color", Color(1.0, 0.985, 0.96)))
+		sm2.set_shader_parameter("cloud_dark", p.get("cloud_shadow", Color(0.43, 0.47, 0.55)))
+		live_sky = true
+	elif env.sky and hdri_name == "" and env.sky.sky_material is ShaderMaterial \
+			and (env.sky.sky_material as ShaderMaterial).shader != null \
+			and str((env.sky.sky_material as ShaderMaterial).shader.resource_path).ends_with("sky_hdri_clouds.gdshader"):
 		# العودة من HDRI إلى السماء الإجرائية (الليل).
 		# الشرط على PanoramaSkyMaterial وحده: بغيره كان وقتٌ إجرائيّ
 		# يحمل ProceduralSkyMaterial يُستبدَل بشادر، فتنكسر كل شيفرة
@@ -164,7 +175,7 @@ static func apply(env: Environment, sun: DirectionalLight3D, key: String, bright
 		back.shader = shader
 		env.sky.sky_material = back
 
-	if env.sky and env.sky.sky_material is ShaderMaterial:
+	if not live_sky and env.sky and env.sky.sky_material is ShaderMaterial:
 		var sm := env.sky.sky_material as ShaderMaterial
 		sm.set_shader_parameter("top_color", p["sky_top"])
 		sm.set_shader_parameter("horizon_color", p["sky_horizon"])
@@ -181,7 +192,7 @@ static func apply(env: Environment, sun: DirectionalLight3D, key: String, bright
 		sm.set_shader_parameter("cloud_amount", float(p.get("clouds", 0.42)))
 		sm.set_shader_parameter("cloud_color", p.get("cloud_color", Color(1.0, 0.96, 0.90)))
 		sm.set_shader_parameter("cloud_shadow", p.get("cloud_shadow", Color(0.42, 0.45, 0.52)))
-	elif env.sky and env.sky.sky_material is ProceduralSkyMaterial:
+	elif not live_sky and env.sky and env.sky.sky_material is ProceduralSkyMaterial:
 		var pm := env.sky.sky_material as ProceduralSkyMaterial
 		pm.sky_top_color = p["sky_top"]
 		pm.sky_horizon_color = p["sky_horizon"]
