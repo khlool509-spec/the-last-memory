@@ -227,8 +227,15 @@ func _test_daylight() -> void:
 		scales.append(vp.scaling_3d_scale)
 		lods.append(vp.mesh_lod_threshold)
 	_true("مستويات الجودة سبعة", Graphics.QUALITY_ORDER.size() == 7)
-	_true("قياس التصيير يتصاعد مع الجودة (%.2f ← %.2f)" % [scales[0], scales[-1]],
-		scales[0] < scales[-1] and scales[0] <= 0.65 and scales[-1] >= 1.2)
+	# سقف القياس 1.0 قرار جوالي: فوقه يعني تصيير أعرض من الشاشة
+	# نفسها، وهو ما أعطى سبعة فريم على S22 Ultra. المستويات الأعلى
+	# تدفع في الظلال والتفصيل والخامات لا في عدد البكسلات.
+	var ascending := true
+	for i in range(1, scales.size()):
+		if scales[i] < scales[i - 1] - 0.001:
+			ascending = false
+	_true("قياس التصيير لا يتناقص مع الجودة (%.2f ← %.2f)" % [scales[0], scales[-1]],
+		ascending and scales[0] <= 0.55 and scales[-1] >= 1.0 and scales[-1] <= 1.0)
 	_true("عتبة التفصيل تتناقص مع الجودة (%.1f ← %.1f)" % [lods[0], lods[-1]],
 		lods[0] > lods[-1])
 

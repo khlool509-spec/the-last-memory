@@ -29,10 +29,10 @@ var body: StaticBody3D
 ## كشوائب متناثرة لا كأرض طبيعية — مكانه الطبيعي بين النباتات.
 ## البيانات المخبوزة كاملة ولم يُحذف منها شيء؛ هذا ترقيق عند الرسم
 ## يتراجع بتبديل الإعداد.
-## الحصى المتناثر مُطفأ بالكامل: على أرض عارية (النبات مطفأ) كان
-## يقرأ كقطع ملصوقة لا كأرض. البيانات المخبوزة كاملة ولم يُحذف منها
-## شيء — رفع القيم هنا يعيده فوراً حين يعود النبات.
-const DENSITY := {"rock_s": 0.0, "rock_l": 0.0, "rock_xl": 0.0}
+## ترقيق الحصى: الصغير منه على أرض عارية (النبات مطفأ) يقرأ كقطع
+## ملصوقة، والكبير يقرأ كجلاميد حقيقية. البيانات المخبوزة كاملة؛
+## هذا ترقيق عند الرسم يتراجع برفع القيم حين يعود النبات.
+const DENSITY := {"rock_s": 0.12, "rock_l": 0.40, "rock_xl": 0.85}
 
 var _mesh_cache: Dictionary = {}     # species -> ArrayMesh
 var _mat_cache: Dictionary = {}      # species -> Material
@@ -154,14 +154,17 @@ func _build_scatter() -> void:
 		if not is_rock and not show_plants:
 			continue
 		var far: float = float(RANGE.get(species, 60.0)) * quality_scale
-		var colored := _colored_buffer(arr, count, species)
+		# الترقيق قبل التلوين: البيانات الخام 12 عدداً للنسخة، أما
+		# المخزن الملوَّن فـ16 (تحويل + لون). ترقيقه بخطوة 12 يُنتج
+		# مخزناً لا يطابق instance_count فيرفضه المحرّك.
 		var keep := float(DENSITY.get(species, 1.0)) * scatter_density
 		if keep < 0.999:
-			var kept := _thin(colored, count, keep, chunk_idx)
-			colored = kept[0]
+			var kept := _thin(arr, count, keep, chunk_idx)
+			arr = kept[0]
 			count = int(kept[1])
 			if count == 0:
 				continue
+		var colored := _colored_buffer(arr, count, species)
 
 		if species in TREES:
 			for li in LOD_BANDS.size():

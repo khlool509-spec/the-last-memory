@@ -186,17 +186,32 @@ func _test_data_integrity() -> void:
 
 	var gm := WorldMaterials.ground()
 	_true("خامة الأرض شادر", gm is ShaderMaterial)
+	# الدقّة لم تعد ثابتة: الكشف التلقائي يختار 512 للأجهزة الضعيفة
+	# و1024 لغيرها. الاختبار يحرس ما يهمّ فعلاً — أن كل خريطة مربوطة
+	# وأن دقّتها تطابق الإعداد المطبَّق — لا رقماً جامداً.
+	var want_w := 512 if str(Settings.get_value("gfx_texture_res")) == "512" else 1024
 	var bound := 0
 	var unbound := PackedStringArray()
 	for pname in ["a_diff", "a_norm", "a_arm", "b_diff", "b_norm", "b_arm",
 			"macro_diff", "rock_diff", "rock_norm", "rock_arm"]:
 		var tex = gm.get_shader_parameter(pname)
-		if tex is Texture2D and (tex as Texture2D).get_width() >= 1024:
+		if tex is Texture2D and (tex as Texture2D).get_width() == want_w:
 			bound += 1
 		else:
 			unbound.append(pname)
-	_true("خرائط الأرض مربوطة بدقة ≥1024 (%d/10)" % bound, bound == 10,
-		"غير مربوط: " + ", ".join(unbound))
+	_true("خرائط الأرض مربوطة بدقّة الإعداد %d (%d/10)" % [want_w, bound],
+		bound == 10, "غير مربوط أو بدقّة أخرى: " + ", ".join(unbound))
+
+	# وحارس منفصل: تبديل الدقّة يجب أن يُعيد تعيين الخامات حيّاً
+	var before_w: int = (gm.get_shader_parameter("a_diff") as Texture2D).get_width()
+	var other := "1k" if want_w == 512 else "512"
+	Settings.set_value("gfx_texture_res", other)
+	WorldMaterials.reload_textures()
+	var after_w: int = (gm.get_shader_parameter("a_diff") as Texture2D).get_width()
+	_true("تبديل دقّة الخامات يُطبَّق حيّاً (%d ← %d)" % [before_w, after_w],
+		after_w != before_w, "الدقّة لم تتغيّر بعد التبديل")
+	Settings.set_value("gfx_texture_res", "512" if want_w == 512 else "1k")
+	WorldMaterials.reload_textures()
 
 	var wm := WorldMaterials.water()
 	_true("خامة الماء شادر", wm is ShaderMaterial)
