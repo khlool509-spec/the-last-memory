@@ -9,13 +9,13 @@ extends Node3D
 ## الكلفة مضبوطة عمداً: التحديث يدور على المدنيّين بالتناوب لا كلّهم في
 ## الإطار الواحد، فيبقى الحمل ثابتاً مهما زاد العدد.
 
-const COUNT := 14
+const COUNT := 9
 const WANDER_R := 46.0            # نصف قطر التجوال حول نقطة السكن
 const SEE_PLAYER := 16.0          # متى ينتبه المدنيّ للاعب
 const UPDATE_SLICE := 4           # كم مدنيّاً يُحدَّث في الإطار الواحد
 
 class Civ:
-	var rig: CharacterRig
+	var rig: Node3D
 	var home: Vector3
 	var target: Vector3
 	var state := "idle"           # idle / walk / look / flee
@@ -52,17 +52,32 @@ func _spawn() -> void:
 		c.home = Vector3(x, h, z)
 		c.target = c.home
 		c.speed = rng.randf_range(0.95, 1.65)
-		c.rig = CharacterRig.create("female" if rng.randf() < 0.45 else "male")
+		# نفس مجسّمات اللاعب المرخّصة: خلط بشر حقيقيين بأشكال مبسّطة
+		# في مشهد واحد يفضح الاثنين. والمجسّم منخفض المضلّعات أصلاً.
+		var g := "female" if rng.randf() < 0.45 else "male"
+		var cm := CharacterModel.new()
+		if cm.load_model("res://assets/models/characters/%s.fbx" % g,
+				1.80 if g == "male" else 1.68):
+			c.rig = cm
+		else:
+			cm.queue_free()
+			c.rig = CharacterRig.create(g)
 		c.rig.position = c.home
 		c.rig.rotation.y = rng.randf_range(0.0, TAU)
 		c.yaw = c.rig.rotation.y
 		# المدنيّون يختفون في المسافة: لا قيمة لرسم من لا يُميَّز
-		for ch in c.rig.get_children():
-			if ch is GeometryInstance3D:
-				(ch as GeometryInstance3D).visibility_range_end = 95.0
+		_set_cull(c.rig, 80.0)
 		add_child(c.rig)
 		_civs.append(c)
 		placed += 1
+
+## إخفاء بالمسافة على كل الشِباك مهما عمُقت السلسلة
+func _set_cull(n: Node, d: float) -> void:
+	if n is GeometryInstance3D:
+		(n as GeometryInstance3D).visibility_range_end = d
+		(n as GeometryInstance3D).visibility_range_end_margin = 12.0
+	for ch in n.get_children():
+		_set_cull(ch, d)
 
 func _process(delta: float) -> void:
 	if _civs.is_empty():
@@ -139,4 +154,7 @@ func _move(c: Civ, delta: float) -> void:
 			c.yaw = lerp_angle(c.yaw, atan2(-to.x, -to.z),
 				clampf(4.0 * delta, 0.0, 1.0))
 	c.rig.rotation.y = c.yaw
-	c.rig.pose(state_name, spd, delta, false)
+	if c.rig is CharacterModel:
+		(c.rig as CharacterModel).play_state(state_name, spd, false)
+	elif c.rig is CharacterRig:
+		(c.rig as CharacterRig).pose(state_name, spd, delta, false)

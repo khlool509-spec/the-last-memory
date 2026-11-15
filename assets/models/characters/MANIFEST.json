@@ -1,0 +1,29 @@
+{
+  "assets": [
+    {
+      "file": "male.fbx",
+      "original_name": "Male_Casual.fbx",
+      "pack": "Animated Men Characters (Feb 2019)",
+      "author": "Quaternius",
+      "source": "https://quaternius.com/packs/animatedmen.html",
+      "license": "CC0 1.0 Universal (Public Domain Dedication)",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "bones": 42,
+      "animations": ["Idle", "Walk", "Run", "Jump", "RunningJump", "Standing",
+                     "Sitting", "Death", "Punch", "Clapping", "SwordSlash"]
+    },
+    {
+      "file": "female.fbx",
+      "original_name": "Female_Casual.fbx",
+      "pack": "Animated Women Characters (Feb 2019)",
+      "author": "Quaternius",
+      "source": "https://quaternius.com/packs/animatedwomen.html",
+      "license": "CC0 1.0 Universal (Public Domain Dedication)",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "bones": 42,
+      "animations": ["Idle", "Walk", "Run", "Jump", "RunningJump", "Standing",
+                     "Sitting", "Death", "Punch", "Clapping", "SwordSlash"]
+    }
+  ],
+  "note": "نصّ الرخصة الأصلي محفوظ في LICENSE_Quaternius.txt بجوار الملفات. CC0 لا تشترط النسبة، لكنها مسجَّلة هنا لتتبّع المصدر."
+}

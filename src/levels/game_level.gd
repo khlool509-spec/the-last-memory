@@ -53,8 +53,15 @@ func _build_player() -> void:
 	var model := CharacterModel.new()
 	model.name = "Model"
 	player.add_child(model)
-	var glb := "res://assets/models/characters/%s.glb" % gender
-	if model.load_model(glb, 1.80 if gender == "male" else 1.68):
+	# ‎.glb أو ‎.fbx: Godot 4 يستورد الاثنين، ومصادر الأصول تختلف
+	var want := 1.80 if gender == "male" else 1.68
+	var found := ""
+	for ext in [".glb", ".fbx", ".gltf"]:
+		var cand := "res://assets/models/characters/%s%s" % [gender, ext]
+		if ResourceLoader.exists(cand):
+			found = cand
+			break
+	if found != "" and model.load_model(found, want):
 		player.set("model", model)
 	else:
 		model.queue_free()

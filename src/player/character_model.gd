@@ -15,11 +15,13 @@ const MATCH := {
 	"idle":   [["idle", "cycle"], ["idle"], ["stand"]],
 	"walk":   [["walk", "gun"], ["walk"], ["move"]],
 	"run":    [["run", "gun"], ["run"], ["sprint"], ["jog"]],
-	"aim":    [["aim", "center"], ["aim"], ["idlecombat"]],
+	"aim":    [["aim", "center"], ["aim"], ["idlecombat"], ["standing"]],
 	"crouch": [["crouch"], ["kneel"], ["duck"]],
 	"prone":  [["prone"], ["crawl"], ["lay"]],
-	"swim":   [["swim"], ["float"]],
-	"dive":   [["dive"], ["swim", "down"], ["swim"]],
+	# لا حركة سباحة في كل الحزم. حين تغيب نستعير المشي ونُميل الجسم
+	# أفقياً من الكود — ساقان تتحرّكان وجسد منبسط يُقرآن سباحة.
+	"swim":   [["swim"], ["float"], ["walk"]],
+	"dive":   [["dive"], ["swim", "down"], ["swim"], ["walk"]],
 	"jump":   [["jump", "midair"], ["jump"], ["fall"]],
 	"fire":   [["fire"], ["shoot"], ["attack"]],
 }
@@ -32,6 +34,16 @@ var root: Node3D = null
 var _map: Dictionary = {}
 var _current := ""
 var _ok := false
+## أوضاع تُطبَّق على الجذر حين تغيب حركتها من الحزمة: إمالة وخفض
+## بدل حركة مخصّصة. الصدق هنا أنفع من ادّعاء حركة غير موجودة.
+const POSE_FIX := {
+	"swim":   {"pitch": -78.0, "lift": -0.55, "squash": 1.0},
+	"dive":   {"pitch": -62.0, "lift": -0.80, "squash": 1.0},
+	"prone":  {"pitch": -86.0, "lift": -0.74, "squash": 1.0},
+	"crouch": {"pitch": 0.0,   "lift": -0.34, "squash": 0.74},
+}
+var _base_scale := Vector3.ONE
+var _pose_t := 0.0
 
 func is_loaded() -> bool:
 	return _ok
@@ -58,6 +70,7 @@ func load_model(path: String, scale_to_height: float = 0.0) -> bool:
 	_build_map()
 	if scale_to_height > 0.0:
 		_fit_height(scale_to_height)
+	_base_scale = root.scale
 	_ok = true
 	return true
 
@@ -158,11 +171,26 @@ func play_state(state: String, speed: float, aiming: bool) -> void:
 		key = "idle"
 	if aiming and _map.has("aim") and key in ["idle", "walk"]:
 		key = "aim"
+	_apply_pose_fix(key)
 	var clip: String = str(_map.get(key, _map.get("idle", "")))
 	if clip == "" or clip == _current:
 		return
 	_current = clip
 	anim.play(clip, 0.25)
+
+## يطبّق الإمالة والخفض على الجذر حسب الحالة. التحوّل ناعم فلا
+## تقفز الشخصية بين وضع وآخر.
+func _apply_pose_fix(key: String) -> void:
+	if root == null:
+		return
+	var f: Dictionary = POSE_FIX.get(key, {})
+	var pitch := float(f.get("pitch", 0.0))
+	var lift := float(f.get("lift", 0.0))
+	var squash := float(f.get("squash", 1.0))
+	root.rotation_degrees.x = lerpf(root.rotation_degrees.x, pitch, 0.18)
+	root.position.y = lerpf(root.position.y, lift, 0.18)
+	var want := _base_scale * Vector3(1.0, squash, 1.0)
+	root.scale = root.scale.lerp(want, 0.18)
 
 func fire_once() -> void:
 	if _ok and _map.has("fire"):
