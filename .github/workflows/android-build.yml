@@ -206,13 +206,16 @@ jobs:
           set -e
           APK=build/android/the_last_memory.apk
           EXPECTED="7DF505367E565CABEBC372483DAEA170A94DAD1DB9C6FDC413B6FFEBBB07DF7C"
-          rm -rf /tmp/sigchk && mkdir -p /tmp/sigchk
-          unzip -o -q "$APK" "META-INF/*.RSA" "META-INF/*.EC" "META-INF/*.DSA" -d /tmp/sigchk
-          SIG=$(find /tmp/sigchk/META-INF -type f | head -1)
-          test -n "$SIG" || { echo "::error::لا توجد شهادة توقيع داخل الـAPK"; exit 1; }
-          openssl pkcs7 -inform DER -in "$SIG" -print_certs -out /tmp/sigchk/cert.pem
-          GOT=$(openssl x509 -in /tmp/sigchk/cert.pem -noout -fingerprint -sha256 \
-                | sed 's/.*=//; s/://g')
+          # apksigner هو الأداة الصحيحة: يقرأ توقيع v1 وv2 وv3 معاً.
+          # قراءة META-INF مباشرة لا تصلح — apksigner يتخطى توقيع v1
+          # عندما يكون minSdk ≥ 24، فلا يوجد ملف .RSA أصلاً.
+          AS=$(ls -d "$ANDROID_SDK_ROOT"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)
+          test -n "$AS" || { echo "::error::apksigner غير موجود"; exit 1; }
+          echo "--- apksigner verify ---"
+          "$AS" verify --verbose --print-certs "$APK" | tee /tmp/sigout.txt
+          GOT=$(grep -iE "Signer #1 certificate SHA-256 digest" /tmp/sigout.txt \
+                | head -1 | sed 's/.*: *//' | tr -d ' :' | tr 'a-f' 'A-F')
+          test -n "$GOT" || { echo "::error::تعذّرت قراءة بصمة الشهادة"; exit 1; }
           echo "المتوقَّع: $EXPECTED"
           echo "الفعلي  : $GOT"
           if [ "$GOT" != "$EXPECTED" ]; then
@@ -220,9 +223,11 @@ jobs:
             exit 1
           fi
           echo "التوقيع ثابت ومطابق"
-          unzip -p "$APK" AndroidManifest.xml | strings | grep -q "debuggable" \
-            && echo "::warning::ما زال debuggable مذكوراً في البيان" \
-            || echo "نسخة release — بلا debuggable"
+          if unzip -p "$APK" AndroidManifest.xml | strings | grep -q "debuggable"; then
+            echo "::warning::ما زال debuggable مذكوراً في البيان"
+          else
+            echo "نسخة release — بلا debuggable"
+          fi
 
       - name: التحقق من بنية الـ APK
         # لا نكتفي بوجود الملف: نفحص أنه أرشيف أندرويد حقيقي
