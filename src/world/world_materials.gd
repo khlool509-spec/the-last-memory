@@ -27,9 +27,26 @@ static func set_foliage_tint(c: Color) -> void:
 ## يكسرانها، والميل يضع الصخر حيث ينبغي.
 static var _ground_mat: ShaderMaterial = null
 const PBR := "res://assets/textures/pbr/"
+const PBR_1K := "res://assets/textures/pbr_1k/"
+
+## دقّة الخامات: 2K للأجهزة القوية، 1K توفّر ثلاثة أرباع الحجم.
+## الاختيار من الإعدادات، ومن متغيّر بيئة للمقارنة البصرية.
+static func _res_dir() -> String:
+	var env := OS.get_environment("PBR_FORCE")
+	if env == "1k":
+		return PBR_1K
+	if env == "2k":
+		return PBR
+	return PBR_1K if str(Settings.get_value("gfx_texture_res")) == "1k" else PBR
 
 static func _pbr(name: String) -> Texture2D:
-	var p := PBR + name
+	var dir := _res_dir()
+	var nm := name
+	if dir == PBR_1K:
+		nm = name.replace("_2k.", "_1k.")
+	var p := dir + nm
+	if not ResourceLoader.exists(p):
+		p = PBR + name            # رجوع إلى 2K إن غاب البديل
 	if ResourceLoader.exists(p):
 		return ResourceLoader.load(p)
 	push_warning("خامة PBR مفقودة: " + p)

@@ -119,22 +119,21 @@ jobs:
           mkdir -p ~/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_STATUS}
           mv templates/* ~/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_STATUS}/
 
-      - name: ربط Godot بالـ SDK و JDK وتوليد مفتاح التوقيع
+      - name: ربط Godot بالـ SDK و JDK والمفتاح الثابت
         # Godot لا يقرأ ANDROID_HOME، بل إعداد المحرر حصراً.
         # و --quit وحده لا يولّد ملف الإعدادات، لذا نكتبه نحن.
-        # مُتحقَّق محلياً: ملف بخمسة أسطر يكفي، وGodot يملأ الباقي افتراضياً.
+        #
+        # مهم: المفتاح لم يعد يُولَّد هنا. توليده في كل بناء كان ينتج
+        # توقيعاً مختلفاً كل مرة، وأندرويد يرفض تحديث تطبيق مثبّت
+        # بتوقيع مختلف برسالة «الحزمة غير صحيحة». المفتاح الآن ملف
+        # ثابت داخل المستودع: ci/thelastmemory.keystore
         run: |
           set -e
           CFG_DIR="$HOME/.config/godot"
           CFG="$CFG_DIR/editor_settings-${GODOT_VERSION%.*}.tres"
-          KS="$HOME/.local/share/godot/keystores/debug.keystore"
-          mkdir -p "$CFG_DIR" "$(dirname "$KS")"
-          if [ ! -f "$KS" ]; then
-            keytool -keyalg RSA -genkeypair -alias androiddebugkey \
-              -keypass android -keystore "$KS" -storepass android \
-              -dname "CN=Android Debug,O=Android,C=US" -validity 9999 \
-              -deststoretype pkcs12
-          fi
+          KS="$PWD/ci/thelastmemory.keystore"
+          test -f "$KS" || { echo "::error::مفتاح التوقيع الثابت مفقود من المستودع"; exit 1; }
+          mkdir -p "$CFG_DIR"
           printf '%s\n' \
             '[gd_resource type="EditorSettings" format=3]' \
             '' \
@@ -142,11 +141,14 @@ jobs:
             "export/android/android_sdk_path = \"$ANDROID_SDK_ROOT\"" \
             "export/android/java_sdk_path = \"$JAVA_HOME\"" \
             "export/android/debug_keystore = \"$KS\"" \
-            'export/android/debug_keystore_user = "androiddebugkey"' \
-            'export/android/debug_keystore_pass = "android"' \
+            'export/android/debug_keystore_user = "thelastmemory"' \
+            'export/android/debug_keystore_pass = "thelastmemory"' \
             > "$CFG"
           echo "--- $CFG ---"
           cat "$CFG"
+          echo "--- بصمة المفتاح المستخدم ---"
+          keytool -list -v -keystore "$KS" -storepass thelastmemory 2>/dev/null \
+            | grep -E "SHA256:|Valid from"
 
       - name: تسخين ذاكرة الاستيراد
         run: |
@@ -174,15 +176,53 @@ jobs:
           fi
           echo "النسخة المصدَّرة أقلعت وعملت 180 إطاراً بلا أخطاء"
 
-      - name: تصدير APK
+      - name: تصدير APK (release موقّع بالمفتاح الثابت)
+        # --export-release بدل --export-debug: يزيل android:debuggable
+        # الذي يبطّئ التشغيل ويستفز Play Protect.
+        # versionCode = 100 + رقم التشغيل: يضمن تصاعداً دائماً فوق أي
+        # إصدار سابق، وبدونه لا يعتبر أندرويد الحزمة تحديثاً.
         run: |
           set -e
           export PATH="$HOME/godot-bin:$PATH"
+          KS="$PWD/ci/thelastmemory.keystore"
+          export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$KS"
+          export GODOT_ANDROID_KEYSTORE_RELEASE_USER="thelastmemory"
+          export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="thelastmemory"
+          VC=$(( 100 + GITHUB_RUN_NUMBER ))
+          sed -i "s|^version/code=.*|version/code=${VC}|" export_presets.cfg
+          sed -i "s|res://ci/thelastmemory.keystore|${KS}|g" export_presets.cfg
+          echo "versionCode = ${VC}"
+          grep -E "^version/|^keystore/" export_presets.cfg
           mkdir -p build/android
-          godot --headless --path . --export-debug "Android" build/android/the_last_memory.apk
+          godot --headless --path . --export-release "Android" build/android/the_last_memory.apk
           test -s build/android/the_last_memory.apk \
             || { echo "::error::لم يُنتَج ملف APK"; exit 1; }
           ls -lh build/android/
+
+      - name: التحقق من ثبات التوقيع
+        # الحارس الذي يمنع تكرار العطل: إذا تغيّرت بصمة الشهادة
+        # عن المفتاح الثابت، يفشل البناء بدل أن يَصدُر APK لا يُثبَّت.
+        run: |
+          set -e
+          APK=build/android/the_last_memory.apk
+          EXPECTED="7DF505367E565CABEBC372483DAEA170A94DAD1DB9C6FDC413B6FFEBBB07DF7C"
+          rm -rf /tmp/sigchk && mkdir -p /tmp/sigchk
+          unzip -o -q "$APK" "META-INF/*.RSA" "META-INF/*.EC" "META-INF/*.DSA" -d /tmp/sigchk
+          SIG=$(find /tmp/sigchk/META-INF -type f | head -1)
+          test -n "$SIG" || { echo "::error::لا توجد شهادة توقيع داخل الـAPK"; exit 1; }
+          openssl pkcs7 -inform DER -in "$SIG" -print_certs -out /tmp/sigchk/cert.pem
+          GOT=$(openssl x509 -in /tmp/sigchk/cert.pem -noout -fingerprint -sha256 \
+                | sed 's/.*=//; s/://g')
+          echo "المتوقَّع: $EXPECTED"
+          echo "الفعلي  : $GOT"
+          if [ "$GOT" != "$EXPECTED" ]; then
+            echo "::error::بصمة التوقيع لا تطابق المفتاح الثابت — الحزمة لن تُثبَّت فوق نسخة سابقة"
+            exit 1
+          fi
+          echo "التوقيع ثابت ومطابق"
+          unzip -p "$APK" AndroidManifest.xml | strings | grep -q "debuggable" \
+            && echo "::warning::ما زال debuggable مذكوراً في البيان" \
+            || echo "نسخة release — بلا debuggable"
 
       - name: التحقق من بنية الـ APK
         # لا نكتفي بوجود الملف: نفحص أنه أرشيف أندرويد حقيقي

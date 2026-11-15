@@ -35,6 +35,7 @@ const DEFAULTS := {
 	"gfx_power_save": false,
 	"gfx_antialiasing": true,
 	"gfx_style": "classic",          # كلاسيكي / زاه / واقعي / ناعم / سينمائي
+	"gfx_texture_res": "2k",        # دقّة الخامات: 2k أو 1k
 	"gfx_colorblind": "none",        # تصحيح حقيقي لا تلوين
 	"ui_safe_area": 0.0,             # إزاحة واجهة الشاشات غير القياسية
 }
