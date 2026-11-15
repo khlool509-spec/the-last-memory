@@ -18,12 +18,15 @@ render_mode blend_mix, depth_draw_never, cull_disabled, diffuse_burley, specular
 
 uniform float anim_time = -1.0;   // ≥0 يستبدل TIME للالتقاط
 uniform sampler2D ripple_tex : hint_normal, filter_linear_mipmap, repeat_enable;
-uniform sampler2D screen_depth : hint_depth_texture, filter_linear;
-uniform sampler2D screen_color : hint_screen_texture, filter_linear_mipmap;
+// مصيّر Mobile لا يوفّر مخزن العمق للشيدرات، وقراءة لون الشاشة
+// مكلفة عليه. العمق يأتي الآن من بيانات مخبوزة في لون الرأس:
+// COLOR.a = بُعد النقطة عن الضفة (0 عند الحافة، 1 في وسط المجرى).
+uniform float channel_depth : hint_range(0.2, 4.0) = 1.35;  // عمق الوسط بالأمتار
 
-uniform vec3 shallow_color : source_color = vec3(0.30, 0.44, 0.42);
-uniform vec3 deep_color : source_color = vec3(0.05, 0.13, 0.17);
-uniform vec3 foam_color : source_color = vec3(0.90, 0.93, 0.93);
+uniform vec3 shallow_color : source_color = vec3(0.38, 0.58, 0.55);
+uniform vec3 deep_color : source_color = vec3(0.08, 0.22, 0.28);
+uniform vec3 foam_color : source_color = vec3(0.92, 0.95, 0.95);
+uniform vec3 bed_tint : source_color = vec3(0.46, 0.42, 0.33);  // حصى القاع
 
 uniform float depth_fade = 2.2;
 uniform float shore_fade = 0.80;
@@ -42,7 +45,7 @@ uniform float wave_steep : hint_range(0.0, 1.0) = 0.80;
 uniform float ripple_scale = 1.4;
 uniform float ripple_fine = 0.42;
 uniform float ripple_strength : hint_range(0.0, 3.0) = 1.3;
-uniform float fresnel_power : hint_range(0.5, 8.0) = 4.4;
+uniform float fresnel_power : hint_range(0.5, 8.0) = 5.2;
 uniform float rough_calm : hint_range(0.0, 1.0) = 0.055;
 uniform float rough_churn : hint_range(0.0, 1.0) = 0.34;
 uniform float foam_depth = 0.95;     // أمتار يظهر فيها زبد الضحل
@@ -121,18 +124,20 @@ void fragment() {
 	vec3 n = normalize(v_wave_n + vec3(micro.x, 0.0, micro.y)
 		* ripple_strength * (0.35 + speed * 0.5));
 
-	// عمق الماء من مخزن العمق
-	float scene_z = texture(screen_depth, SCREEN_UV).r;
-	vec4 wp4 = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, scene_z, 1.0);
-	wp4.xyz /= wp4.w;
-	float water_depth = max(-wp4.z - (-VERTEX.z), 0.0);
+	// عمق الماء من مقطع المجرى المخبوز: الضفة ضحلة والوسط أعمق.
+	// منحنى تربيعي لأن قاع النهر مقعّر لا مسطّح.
+	float mid_f = clamp(v_flow.a, 0.0, 1.0);
+	float water_depth = channel_depth * mid_f * mid_f;
 	float dt = clamp(water_depth / depth_fade, 0.0, 1.0);
 
-	// امتصاص حسب العمق: القاع يُرى في الضحل ويختفي في العمق
-	vec2 ruv = SCREEN_UV + n.xz * refraction * (0.25 + dt * 0.75);
-	vec3 below = texture(screen_color, ruv).rgb;
+	// قاع مرئي في الضحل: حصى فاتح يظهر عبر الماء عند الضفاف،
+	// ويبتلعه الامتصاص كلما عمُق المجرى. هذا ما يجعل النهر يُقرأ
+	// كنهر لا كشريط ملوّن — التدرّج من الحافة إلى الوسط.
+	vec2 buv = v_world.xz / 1.7 + n.xz * refraction * 2.0;
+	float bed = texture(ripple_tex, buv).g * 0.5 + 0.5;
+	vec3 bed_col = bed_tint * (0.72 + 0.56 * bed);
 	vec3 absorb = mix(shallow_color, deep_color, dt);
-	vec3 col = mix(below * mix(vec3(1.0), absorb * 2.4, 0.78), absorb, dt);
+	vec3 col = mix(bed_col * absorb * 1.35, absorb, smoothstep(0.0, 0.75, dt));
 
 	float fres = pow(1.0 - clamp(dot(normalize(VIEW), NORMAL), 0.0, 1.0), fresnel_power);
 
@@ -143,7 +148,7 @@ void fragment() {
 	float shallow_f = 1.0 - smoothstep(0.0, foam_depth, water_depth);
 	float crest = smoothstep(0.35, 0.95, v_wave_n.y < 0.999 ? (1.0 - v_wave_n.y) * 42.0 : 0.0);
 	float churn_f = v_churn * (0.35 + 0.65 * (r_fine.y * 0.5 + 0.5));
-	float foam = clamp(shallow_f * 0.9 + churn_f * crest * 0.85, 0.0, 1.0);
+	float foam = clamp(shallow_f * 0.38 + churn_f * crest * 0.55, 0.0, 1.0);
 	// تلاشٍ تدريجي: الزبد لا يظهر ويختفي فجأة
 	foam *= 0.55 + 0.45 * (r_coarse.y * 0.5 + 0.5);
 
@@ -156,5 +161,5 @@ void fragment() {
 	// قاعدة شفافية لا تهبط إلى الصفر داخل المجرى: الماء الضحل
 	// يبقى مرئياً كغشاء، ولا يختفي تاركاً القاع عارياً.
 	ALPHA = clamp(shore + foam * 0.8, 0.0, 1.0)
-		* mix(0.74, 0.98, clamp(dt + fres * 0.55, 0.0, 1.0));
+		* mix(0.86, 1.0, clamp(dt + fres * 0.55, 0.0, 1.0));
 }

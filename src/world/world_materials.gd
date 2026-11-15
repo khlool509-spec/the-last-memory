@@ -26,61 +26,63 @@ static func set_foliage_tint(c: Color) -> void:
 ## خامة واحدة مكرّرة بمقياس واحد تُظهر شبكة بلاط مهما حسُنت؛ المقياسان
 ## يكسرانها، والميل يضع الصخر حيث ينبغي.
 static var _ground_mat: ShaderMaterial = null
-const PBR := "res://assets/textures/pbr/"
-const PBR_1K := "res://assets/textures/pbr_1k/"
+const PBR := "res://assets/textures/pbr/"          # 2K — محفوظة للمراجعة، غير مشمولة في حزمة الجوال
+const PBR_1K := "res://assets/textures/pbr_1k/"    # الأساس
+const PBR_512 := "res://assets/textures/pbr_512/"  # الأجهزة الضعيفة
 
-## دقّة الخامات: 2K للأجهزة القوية، 1K توفّر ثلاثة أرباع الحجم.
-## الاختيار من الإعدادات، ومن متغيّر بيئة للمقارنة البصرية.
-static func _res_dir() -> String:
+## اللعبة مصمّمة لكروت الجوال، فـ1K هي الأساس لا البديل.
+## على شاشة 6.8 بوصة وبتبليط مترين، كثافة التكسل عند 1K كافية،
+## وتكلفتها في ذاكرة الـGPU ربع تكلفة 2K. و512 للأجهزة الضعيفة.
+## قياس فعلي بضغط ETC2 مع mipmaps للخامة الواحدة:
+##   2K = 2.67 MB   |   1K = 0.67 MB   |   512 = 0.17 MB
+const RES_DIRS := {"512": PBR_512, "1k": PBR_1K, "2k": PBR}
+
+static func _res_key() -> String:
 	var env := OS.get_environment("PBR_FORCE")
-	if env == "1k":
-		return PBR_1K
-	if env == "2k":
-		return PBR
-	return PBR_1K if str(Settings.get_value("gfx_texture_res")) == "1k" else PBR
+	if env in RES_DIRS:
+		return env
+	var k := str(Settings.get_value("gfx_texture_res"))
+	return k if k in RES_DIRS else "1k"
 
 static func _pbr(name: String) -> Texture2D:
-	var dir := _res_dir()
-	var nm := name
-	if dir == PBR_1K:
-		nm = name.replace("_2k.", "_1k.")
-	var p := dir + nm
-	if not ResourceLoader.exists(p):
-		p = PBR + name            # رجوع إلى 2K إن غاب البديل
-	if ResourceLoader.exists(p):
-		return ResourceLoader.load(p)
-	push_warning("خامة PBR مفقودة: " + p)
+	# الأسماء في الكود مكتوبة بلاحقة _2k؛ نترجمها إلى الدقّة المختارة.
+	var order: Array = [_res_key(), "1k", "512", "2k"]
+	for key in order:
+		var p: String = RES_DIRS[key] + name.replace("_2k.", "_" + key + ".") \
+			if key != "2k" else PBR + name
+		if ResourceLoader.exists(p):
+			return ResourceLoader.load(p)
+	push_warning("خامة PBR مفقودة بكل الدقّات: " + name)
 	return null
 
 ## أرض الغابة: خامات مصوّرة من Poly Haven برخصة CC0، بمقاييسها الواقعية.
 ## المصادر والبصمات في assets/textures/pbr/MANIFEST.json
+static func _assign_ground_textures(m: ShaderMaterial) -> void:
+	## مفصولة عن البناء حتى تُبدَّل الدقّة حيّاً دون إعادة تحميل المشهد.
+	m.set_shader_parameter("a_diff", _pbr("mud_forest_diff_2k.jpg"))
+	m.set_shader_parameter("a_norm", _pbr("mud_forest_nor_2k.jpg"))
+	m.set_shader_parameter("a_arm", _pbr("mud_forest_arm_2k.jpg"))
+	m.set_shader_parameter("b_diff", _pbr("forrest_ground_01_diff_2k.jpg"))
+	m.set_shader_parameter("b_norm", _pbr("forrest_ground_01_nor_2k.jpg"))
+	m.set_shader_parameter("b_arm", _pbr("forrest_ground_01_arm_2k.jpg"))
+	m.set_shader_parameter("a_disp", _pbr("mud_forest_disp_2k.jpg"))
+	m.set_shader_parameter("b_disp", _pbr("forrest_ground_01_disp_2k.jpg"))
+	m.set_shader_parameter("c_diff", _pbr("forest_floor_diff_2k.jpg"))
+	m.set_shader_parameter("c_norm", _pbr("forest_floor_nor_2k.jpg"))
+	m.set_shader_parameter("c_arm", _pbr("forest_floor_arm_2k.jpg"))
+	m.set_shader_parameter("macro_diff", _pbr("rocky_terrain_diff_2k.jpg"))
+	m.set_shader_parameter("rock_diff", _pbr("aerial_rocks_02_diff_2k.jpg"))
+	m.set_shader_parameter("rock_norm", _pbr("aerial_rocks_02_nor_2k.jpg"))
+	m.set_shader_parameter("rock_arm", _pbr("aerial_rocks_02_arm_2k.jpg"))
+
 static func ground() -> ShaderMaterial:
 	if _ground_mat != null:
 		return _ground_mat
 	var sh: Shader = ResourceLoader.load("res://assets/shaders/ground.gdshader")
 	var m := ShaderMaterial.new()
 	m.shader = sh
-	# أ: طين غابة رطب (mud_forest، بلاطة 2.35 م)
-	m.set_shader_parameter("a_diff", _pbr("mud_forest_diff_2k.jpg"))
-	m.set_shader_parameter("a_norm", _pbr("mud_forest_nor_2k.jpg"))
-	m.set_shader_parameter("a_arm", _pbr("mud_forest_arm_2k.jpg"))
-	# ب: أرض غابة بعشب (forrest_ground_01، بلاطة 2.00 م)
-	m.set_shader_parameter("b_diff", _pbr("forrest_ground_01_diff_2k.jpg"))
-	m.set_shader_parameter("b_norm", _pbr("forrest_ground_01_nor_2k.jpg"))
-	m.set_shader_parameter("b_arm", _pbr("forrest_ground_01_arm_2k.jpg"))
-	m.set_shader_parameter("a_disp", _pbr("mud_forest_disp_2k.jpg"))
-	m.set_shader_parameter("b_disp", _pbr("forrest_ground_01_disp_2k.jpg"))
-	# ج: فرش أوراق ساقطة (forest_floor، بلاطة 2.14 م)
-	m.set_shader_parameter("c_diff", _pbr("forest_floor_diff_2k.jpg"))
-	m.set_shader_parameter("c_norm", _pbr("forest_floor_nor_2k.jpg"))
-	m.set_shader_parameter("c_arm", _pbr("forest_floor_arm_2k.jpg"))
-	# نطاق واسع: تضاريس جوية (rocky_terrain، بلاطة 90 م)
-	m.set_shader_parameter("macro_diff", _pbr("rocky_terrain_diff_2k.jpg"))
+	_assign_ground_textures(m)
 	m.set_shader_parameter("water_level", WorldProfile.WATER_LEVEL)
-	# الصخر على المنحدرات (aerial_rocks_02)
-	m.set_shader_parameter("rock_diff", _pbr("aerial_rocks_02_diff_2k.jpg"))
-	m.set_shader_parameter("rock_norm", _pbr("aerial_rocks_02_nor_2k.jpg"))
-	m.set_shader_parameter("rock_arm", _pbr("aerial_rocks_02_arm_2k.jpg"))
 	if OS.get_environment("NO_POM") == "1":
 		m.set_shader_parameter("pom_enable", 0.0)
 	if OS.get_environment("NO_VCOL") == "1":
@@ -89,6 +91,20 @@ static func ground() -> ShaderMaterial:
 		m.set_shader_parameter("dbg", int(OS.get_environment("GROUND_DBG")))
 	_ground_mat = m
 	return m
+
+## إعادة تعيين الخامات بالدقّة الجديدة على المواد القائمة نفسها.
+## الشِباك تشير إلى المادة ذاتها، فالتبديل فوري بلا إعادة تحميل.
+static func reload_textures() -> void:
+	if _ground_mat != null:
+		_assign_ground_textures(_ground_mat)
+	if _rock_mat != null:
+		_assign_rock_textures(_rock_mat)
+
+## خرائط الإزاحة الموازية (POM) حلقة رايمارش لكل بكسل — أثقل ما في
+## شيدر الأرض. تُوقَف في المستويات المخففة.
+static func set_pom(enabled: bool) -> void:
+	if _ground_mat != null:
+		_ground_mat.set_shader_parameter("pom_enable", 1.0 if enabled else 0.0)
 
 ## لحاء الأشجار: خامة حقيقية بإحداثيات تتبع الجذع
 static var _bark_mat: StandardMaterial3D = null
@@ -203,14 +219,17 @@ static func roof(tint: Color = Color.WHITE) -> ORMMaterial3D:
 
 ## صخور الأرض: شادر ثلاثي المحاور على خامة صخر مصوّرة
 static var _rock_mat: ShaderMaterial = null
+static func _assign_rock_textures(m: ShaderMaterial) -> void:
+	m.set_shader_parameter("rock_diff", _pbr("aerial_rocks_02_diff_2k.jpg"))
+	m.set_shader_parameter("rock_norm", _pbr("aerial_rocks_02_nor_2k.jpg"))
+	m.set_shader_parameter("rock_arm", _pbr("aerial_rocks_02_arm_2k.jpg"))
+
 static func rock_scatter() -> ShaderMaterial:
 	if _rock_mat != null:
 		return _rock_mat
 	var m := ShaderMaterial.new()
 	m.shader = ResourceLoader.load("res://assets/shaders/rock.gdshader")
-	m.set_shader_parameter("rock_diff", _pbr("aerial_rocks_02_diff_2k.jpg"))
-	m.set_shader_parameter("rock_norm", _pbr("aerial_rocks_02_nor_2k.jpg"))
-	m.set_shader_parameter("rock_arm", _pbr("aerial_rocks_02_arm_2k.jpg"))
+	_assign_rock_textures(m)
 	_rock_mat = m
 	return m
 

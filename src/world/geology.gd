@@ -14,11 +14,11 @@ const DIR := "res://assets/models/"
 
 ## الكتل الكبيرة: اسم النموذج، مدى القياس، ومدى الرؤية بالمتر
 const PIECES := {
-	"rock_face_01":     {"scale": [1.6, 3.4], "range": 260.0, "sink": 0.22},
-	"rock_face_02":     {"scale": [1.8, 3.8], "range": 240.0, "sink": 0.20},
-	"rock_moss_set_01": {"scale": [1.0, 2.2], "range": 190.0, "sink": 0.18},
-	"rock_moss_set_02": {"scale": [1.1, 2.4], "range": 190.0, "sink": 0.18},
-	"boulder_01":       {"scale": [1.2, 3.0], "range": 170.0, "sink": 0.26},
+	"rock_face_01":     {"scale": [1.6, 3.4], "range": 260.0, "sink": 0.34},
+	"rock_face_02":     {"scale": [1.8, 3.8], "range": 240.0, "sink": 0.32},
+	"rock_moss_set_01": {"scale": [1.0, 2.2], "range": 190.0, "sink": 0.30},
+	"rock_moss_set_02": {"scale": [1.1, 2.4], "range": 190.0, "sink": 0.30},
+	"boulder_01":       {"scale": [1.2, 3.0], "range": 170.0, "sink": 0.38},
 }
 
 static var _cache: Dictionary = {}
@@ -116,7 +116,28 @@ static func build(world: WorldRenderer, wp: WorldProfile, parent: Node3D) -> int
 			b = b.rotated(Vector3(cos(t2), 0.0, sin(t2)), rng.randf_range(-0.22, 0.22))
 			b = b.scaled(Vector3(s * rng.randf_range(0.88, 1.12), s * rng.randf_range(0.80, 1.15),
 				s * rng.randf_range(0.88, 1.12)))
-			mi.transform = Transform3D(b, Vector3(x, h - s * float(spec["sink"]), z))
+			# الاستقرار على أخفض نقطة تحت بصمة الكتلة لا على مركزها.
+			# على منحدر، تثبيت المركز وحده يرفع الطرف الأسفل عن الأرض
+			# فتبدو الصخرة طائرة — وهذا ما كان يحدث فعلاً.
+			# كسر «الصخور الطائرة»: لا تخمين بنسبة من الحجم، بل حساب
+			# أدنى نقطة في المجسّم بعد الدوران والتحجيم، ووضعها عند
+			# أخفض أرض تحت بصمته. نسبة الغوص كانت تُقاس من المركز،
+			# فكتلة مائلة على منحدر يرتفع طرفها عن الأرض مهما غاصت.
+			var ab := mesh.get_aabb()
+			var low := INF
+			var wide := 0.0
+			for ci in 8:
+				var c: Vector3 = b * ab.get_endpoint(ci)
+				low = minf(low, c.y)
+				wide = maxf(wide, Vector2(c.x, c.z).length())
+			var h_min := h
+			for a in 8:
+				var ang := TAU * float(a) / 8.0
+				h_min = minf(h_min, wp.height(x + cos(ang) * wide,
+					z + sin(ang) * wide))
+			# أدنى رأس يلامس أخفض أرض، ثم يُدفن بجزء من ارتفاع الكتلة
+			var y := h_min - low - ab.size.y * s * float(spec["sink"])
+			mi.transform = Transform3D(b, Vector3(x, y, z))
 			mi.visibility_range_end = float(spec["range"])
 			mi.visibility_range_end_margin = 24.0
 			mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF

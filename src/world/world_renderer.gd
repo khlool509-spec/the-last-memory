@@ -25,6 +25,15 @@ var scatter_root: Node3D
 var water_root: Node3D
 var body: StaticBody3D
 
+## تخفيف الكثافة: الحصى الصغير على أرض عارية (النبات مطفأ) يقرأ
+## كشوائب متناثرة لا كأرض طبيعية — مكانه الطبيعي بين النباتات.
+## البيانات المخبوزة كاملة ولم يُحذف منها شيء؛ هذا ترقيق عند الرسم
+## يتراجع بتبديل الإعداد.
+## الحصى المتناثر مُطفأ بالكامل: على أرض عارية (النبات مطفأ) كان
+## يقرأ كقطع ملصوقة لا كأرض. البيانات المخبوزة كاملة ولم يُحذف منها
+## شيء — رفع القيم هنا يعيده فوراً حين يعود النبات.
+const DENSITY := {"rock_s": 0.0, "rock_l": 0.0, "rock_xl": 0.0}
+
 var _mesh_cache: Dictionary = {}     # species -> ArrayMesh
 var _mat_cache: Dictionary = {}      # species -> Material
 var _ground_mat: Material
@@ -104,6 +113,8 @@ const FADE := 6.0
 
 ## مضاعف المسافات حسب إعداد الجودة
 var quality_scale: float = 1.0
+## مضاعف كثافة إضافي تضبطه الجودة: المستويات المخففة تعرض أقل
+var scatter_density: float = 1.0
 var vegetation_hidden: bool = false
 ## عدد الكتل الجيولوجية المُركَّبة — تقرؤه الاختبارات
 var geology_count: int = 0
@@ -144,6 +155,13 @@ func _build_scatter() -> void:
 			continue
 		var far: float = float(RANGE.get(species, 60.0)) * quality_scale
 		var colored := _colored_buffer(arr, count, species)
+		var keep := float(DENSITY.get(species, 1.0)) * scatter_density
+		if keep < 0.999:
+			var kept := _thin(colored, count, keep, chunk_idx)
+			colored = kept[0]
+			count = int(kept[1])
+			if count == 0:
+				continue
 
 		if species in TREES:
 			for li in LOD_BANDS.size():
@@ -158,6 +176,21 @@ func _build_scatter() -> void:
 					b0, minf(b1, far), li, rng)
 		else:
 			_add_batch(species, chunk_idx, colored, count, 1.0, 0.0, far, 0, rng)
+
+## ترقيق حتمي: نفس البذرة تعطي نفس الصخور في كل تشغيل، فلا
+## ترتعش الخريطة بين جلسة وأخرى.
+func _thin(buf: PackedFloat32Array, count: int, keep: float,
+		chunk_idx: int) -> Array:
+	var out := PackedFloat32Array()
+	var r := RandomNumberGenerator.new()
+	r.seed = int(WorldProfile.SEED) + chunk_idx * 7919
+	var n := 0
+	for i in count:
+		if r.randf() <= keep:
+			for j in 12:
+				out.append(buf[i * 12 + j])
+			n += 1
+	return [out, n]
 
 func _add_batch(species: String, chunk_idx: int, buf: PackedFloat32Array, count: int,
 		detail: float, begin: float, end: float, lod: int, rng: RandomNumberGenerator) -> void:
@@ -214,12 +247,30 @@ func _colored_buffer(src: PackedFloat32Array, count: int, species: String) -> Pa
 		out[di + 15] = 1.0
 	return out
 
+## مسافة العرض وكثافة التناثر حسب مستوى الجودة.
+## كانت تقرأ المفتاح القديم graphics_quality الذي لم يعد أحد يكتبه،
+## فظلّت المسافات عند 1.0 مهما غيّر اللاعب الإعداد — أي أن تخفيض
+## الجودة لم يكن يخفّض شيئاً من حمل العالم.
+const QS := {
+	"lite": 0.45, "ultra_smooth": 0.58, "smooth": 0.70,
+	"balanced": 0.84, "hd": 0.93, "hdr": 1.0, "ultra_hdr": 1.10,
+}
+const QD := {
+	"lite": 0.35, "ultra_smooth": 0.50, "smooth": 0.68,
+	"balanced": 0.82, "hd": 0.92, "hdr": 1.0, "ultra_hdr": 1.0,
+}
+
+## «تفصيل العالم» يبقى مفتاحاً مستقلاً للاعب، لكنه صار مضاعِفاً
+## فوق مستوى الرسومات بدل أن يكون المصدر الوحيد.
+const DETAIL_MULT := {"low": 0.70, "medium": 0.88, "high": 1.0}
+
 func _quality_scale() -> float:
-	var q := str(Settings.get_value("graphics_quality"))
-	match q:
-		"low": return 0.62
-		"medium": return 0.84
-	return 1.0
+	var q := str(Settings.get_value("gfx_quality"))
+	if bool(Settings.get_value("gfx_power_save")):
+		q = "lite"
+	var d := float(DETAIL_MULT.get(str(Settings.get_value("graphics_quality")), 1.0))
+	scatter_density = float(QD.get(q, 0.82)) * d
+	return float(QS.get(q, 0.84)) * d
 
 func _mesh_for(species: String, rng: RandomNumberGenerator, detail: float, lod: int) -> ArrayMesh:
 	var key := "%s|%d" % [species, lod]

@@ -27,14 +27,36 @@ func _ready() -> void:
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(dim)
 
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
+	## التمرير: المحتوى أطول من شاشة الجوال، وCenterContainer كان
+	## يقصّ ما يزيد فتختفي الإعدادات السفلية. ScrollContainer يسمح
+	## بالسحب باللمس (Godot يحوّل اللمس إلى تمرير تلقائياً).
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for side in ["top", "bottom", "left", "right"]:
+		margin.add_theme_constant_override("margin_" + side, 18)
+	add_child(margin)
+
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.follow_focus = true          # التنقّل بالزناد يُبقي العنصر مرئياً
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	margin.add_child(scroll)
+
+	# صفّ أفقي يوسّط اللوحة دون أن يقيّد ارتفاعها
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	scroll.add_child(row)
 
 	var panel := PanelContainer.new()
 	panel.name = "Panel"
-	panel.custom_minimum_size = Vector2(880, 0)
-	center.add_child(panel)
+	# عرض متجاوب: لا يتجاوز 880 ولا يفيض على الشاشات الضيّقة
+	var vw := float(get_viewport_rect().size.x)
+	panel.custom_minimum_size = Vector2(minf(880.0, vw - 48.0), 0)
+	panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	row.add_child(panel)
 
 	var frame := OrnateFrame.new()
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -66,8 +88,9 @@ func _ready() -> void:
 	# ينقل الإعداد إلى «مخصص» تلقائياً.
 	_rows.append(_add(col, OptionCycler.new(
 		"gfx_preset", "تفضيلات الرسومات",
-		["custom", "fps", "balanced", "quality"],
-		["مخصص", "معدل إطارات أفضل", "متوازنة", "رسومات أفضل"], "✧")))
+		["auto", "custom", "lite", "fps", "balanced", "quality"],
+		["تلقائي حسب الجهاز", "مخصص", "مخففة للأجهزة الضعيفة",
+		 "معدل إطارات أفضل", "متوازنة", "رسومات أفضل"], "✧")))
 
 	_rows.append(_add(col, OptionCycler.new(
 		"gfx_quality", "الرسومات",
@@ -110,6 +133,14 @@ func _ready() -> void:
 		"gfx_colorblind", "وضع عمى الألوان",
 		Graphics.CB_ORDER,
 		Graphics.CB_ORDER.map(func(k): return str(Graphics.CB_LABEL[k])), "◉")))
+
+	_rows.append(_add(col, OptionCycler.new(
+		"gfx_texture_res", "دقة الخامات",
+		["512", "1k"], ["منخفضة (أخف)", "عالية"], "▣")))
+
+	_rows.append(_add(col, OptionCycler.new(
+		"gfx_show_fps", "عداد الإطارات",
+		[false, true], ["إخفاء", "إظهار"], "📊")))
 
 	_rows.append(_add(col, SettingSlider.new("ui_safe_area",
 		"واجهة الشاشات غير القياسية", "▭", 0.0, 1.0, 0.05)))

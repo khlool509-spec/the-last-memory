@@ -13,14 +13,14 @@ shader_type sky;
 
 uniform float anim_time = -1.0;   // ≥0 يستبدل TIME للالتقاط
 uniform sampler2D panorama : source_color, filter_linear;
-uniform float pano_energy : hint_range(0.0, 8.0) = 1.0;
+uniform float pano_energy : hint_range(0.0, 8.0) = 1.18;
 uniform float pano_yaw : hint_range(0.0, 6.2832) = 0.0;
 
 uniform vec3 sun_color : source_color = vec3(1.0, 0.97, 0.92);
-uniform vec3 cloud_lit : source_color = vec3(1.0, 0.985, 0.96);
-uniform vec3 cloud_dark : source_color = vec3(0.43, 0.47, 0.55);
-uniform float cloud_amount : hint_range(0.0, 1.0) = 0.46;
-uniform float cloud_sharp : hint_range(0.5, 8.0) = 2.6;
+uniform vec3 cloud_lit : source_color = vec3(1.0, 0.99, 0.975);
+uniform vec3 cloud_dark : source_color = vec3(0.34, 0.40, 0.52);
+uniform float cloud_amount : hint_range(0.0, 1.0) = 0.54;
+uniform float cloud_sharp : hint_range(0.5, 8.0) = 4.2;
 uniform float layer1_scale = 2.6;
 uniform float layer2_scale = 6.2;
 uniform vec2 layer1_wind = vec2(0.0085, 0.0032);

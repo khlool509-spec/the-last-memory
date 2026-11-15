@@ -3,19 +3,21 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://4w663xo1yjcd"
-path="res://.godot/imported/ground_albedo.png-cf0fd6a3a49b19bd0e6d99e4f0d7d46f.ctex"
+path.s3tc="res://.godot/imported/ground_albedo.png-cf0fd6a3a49b19bd0e6d99e4f0d7d46f.s3tc.ctex"
+path.etc2="res://.godot/imported/ground_albedo.png-cf0fd6a3a49b19bd0e6d99e4f0d7d46f.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/textures/world/ground_albedo.png"
-dest_files=["res://.godot/imported/ground_albedo.png-cf0fd6a3a49b19bd0e6d99e4f0d7d46f.ctex"]
+dest_files=["res://.godot/imported/ground_albedo.png-cf0fd6a3a49b19bd0e6d99e4f0d7d46f.s3tc.ctex", "res://.godot/imported/ground_albedo.png-cf0fd6a3a49b19bd0e6d99e4f0d7d46f.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
