@@ -317,6 +317,7 @@ func _build_weapons() -> void:
 func feed(pos: Vector3, yaw_deg: float, speed: float, state: String) -> void:
 	if compass:
 		compass.set_heading(yaw_deg)
+		compass.set_player(Vector2(pos.x, pos.z))
 	if minimap:
 		minimap.set_player(Vector2(pos.x, pos.z), deg_to_rad(yaw_deg))
 	if coords:

@@ -193,7 +193,7 @@ func _apply_pose_fix(key: String) -> void:
 	var pitch := float(f.get("pitch", 0.0))
 	var lift := float(f.get("lift", 0.0))
 	var squash := float(f.get("squash", 1.0))
-	root.rotation.y = _base_yaw
+	root.rotation.y = _base_yaw            # لا تُفقد دورة الاصطلاح
 	root.rotation_degrees.x = lerpf(root.rotation_degrees.x, pitch, 0.18)
 	root.position.y = lerpf(root.position.y, lift, 0.18)
 	var want := _base_scale * Vector3(1.0, squash, 1.0)

@@ -17,6 +17,11 @@ const CARDINALS := {
 }
 
 var heading: float = 0.0          # 0..360، صفر = شمال
+## معالم العالم: تظهر على الشريط في اتجاهها الحقيقي من اللاعب، فيصير
+## الشريط مربوطاً بالخريطة كلها لا بالدرجات وحدها. هذا ما يجعله
+## أداة ملاحة: تلتفت حتى يصير المعلم في المنتصف ثم تمشي.
+var landmarks: Array = []         # [{pos: Vector2, name: String, glyph}]
+var player_pos: Vector2 = Vector2.ZERO
 var _font: Font
 var _font_small: Font
 
@@ -33,6 +38,17 @@ func set_heading(deg: float) -> void:
 	if absf(d - heading) < 0.05:
 		return
 	heading = d
+	queue_redraw()
+
+## موضع اللاعب: تُحسب منه زوايا المعالم في كل رسم
+func set_player(p: Vector2) -> void:
+	if p.distance_squared_to(player_pos) < 1.0:
+		return
+	player_pos = p
+	queue_redraw()
+
+func set_landmarks(list: Array) -> void:
+	landmarks = list
 	queue_redraw()
 
 func _draw() -> void:
@@ -83,6 +99,29 @@ func _draw() -> void:
 				draw_line(Vector2(x, h * 0.62), Vector2(x, h * 0.76),
 					Color(1, 1, 1, alpha * 0.4), 1.0)
 		deg += MAJOR
+
+	# المعالم: كل واحد في زاويته الحقيقية من موضع اللاعب
+	for lm in landmarks:
+		var to: Vector2 = (lm["pos"] as Vector2) - player_pos
+		if to.length() < 1.0:
+			continue
+		# صفر = شمال، والزاوية تزيد مع عقارب الساعة كالبوصلة
+		var bearing := fposmod(rad_to_deg(atan2(to.x, -to.y)), 360.0)
+		var off := fposmod(bearing - heading + 180.0, 360.0) - 180.0
+		if absf(off) > span * 0.5:
+			continue
+		var x := mid + off / DEG_PER_PX
+		var dist := to.length()
+		var col: Color = lm.get("color", Color(1.0, 0.86, 0.45))
+		# علامة مثلّثة أعلى الشريط ثم الاسم والمسافة تحتها
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(x - 6.0, 14.0), Vector2(x + 6.0, 14.0), Vector2(x, 24.0),
+		]), col)
+		var txt := "%s %dم" % [str(lm["name"]), int(round(dist))]
+		var tw2 := _font_small.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT,
+			-1, 13).x
+		draw_string(_font_small, Vector2(x - tw2 * 0.5, 38.0), txt,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(col.r, col.g, col.b, 0.92))
 
 	# المؤشّر الثابت ورقم الاتجاه الحالي تحته
 	var cur := str(int(round(heading)))

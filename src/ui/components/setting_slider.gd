@@ -57,6 +57,14 @@ func _build(title_text: String, glyph: String) -> void:
 	_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_slider.custom_minimum_size = Vector2(240, 34)
 	add_child(_slider)
+	# حاجب يحسم تنازع الإيماءة: اللمسة تبدأ عنده لا عند المنزلق،
+	# فيقرّر حسب أول حركة أهي ضبط أفقي أم تمرير رأسي. بدونه يبتلع
+	# المنزلق كل سحب فوقه ولا تتمرّر الصفحة — وهي «النقاط العمياء».
+	var guard := _DragGuard.new()
+	guard.slider = _slider
+	guard.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	guard.mouse_filter = Control.MOUSE_FILTER_STOP
+	_slider.add_child(guard)
 
 	_value_label = Label.new()
 	_value_label.custom_minimum_size = Vector2(78, 0)
@@ -95,3 +103,65 @@ func refresh_from_settings() -> void:
 	var v := float(Settings.get_value(key))
 	_slider.set_value_no_signal(v)
 	_refresh(v)
+
+
+## حاجب تنازع الإيماءة بين ضبط المنزلق وتمرير الصفحة.
+## القاعدة البسيطة التي تستخدمها واجهات الجوال: أول حركة تحسم —
+## إن غلب الأفقي فهو ضبط، وإن غلب الرأسي فهو تمرير، ولا تتبدّل
+## النيّة في منتصف السحب.
+class _DragGuard:
+	extends Control
+
+	const DECIDE := 10.0        # بكسلات قبل الحسم
+
+	var slider: HSlider = null
+	var _start := Vector2.ZERO
+	var _mode := 0              # 0 لم يُحسم، 1 أفقي، 2 رأسي
+	var _active := false
+	var _scroll: ScrollContainer = null
+
+	func _find_scroll() -> ScrollContainer:
+		var n: Node = get_parent()
+		while n != null:
+			if n is ScrollContainer:
+				return n
+			n = n.get_parent()
+		return null
+
+	func _apply(at: Vector2) -> void:
+		if slider == null:
+			return
+		var w := slider.size.x
+		if w <= 1.0:
+			return
+		var t: float = clampf(at.x / w, 0.0, 1.0)
+		slider.value = slider.min_value + t * (slider.max_value - slider.min_value)
+
+	func _gui_input(event: InputEvent) -> void:
+		if event is InputEventScreenTouch or event is InputEventMouseButton:
+			var pressed: bool = (event.pressed if "pressed" in event else false)
+			if pressed:
+				_active = true
+				_mode = 0
+				_start = event.position
+				if _scroll == null:
+					_scroll = _find_scroll()
+			else:
+				# نقرة بلا حركة = ضبط مباشر عند موضع الإصبع
+				if _active and _mode == 0:
+					_apply(event.position)
+				_active = false
+				_mode = 0
+			accept_event()
+		elif _active and (event is InputEventScreenDrag
+				or event is InputEventMouseMotion):
+			var d: Vector2 = event.position - _start
+			if _mode == 0 and d.length() >= DECIDE:
+				_mode = 1 if absf(d.x) > absf(d.y) else 2
+			if _mode == 1:
+				_apply(event.position)
+			elif _mode == 2 and _scroll != null:
+				var rel: Vector2 = (event.relative if "relative" in event
+					else Vector2.ZERO)
+				_scroll.scroll_vertical -= int(rel.y)
+			accept_event()

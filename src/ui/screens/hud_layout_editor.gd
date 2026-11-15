@@ -123,24 +123,53 @@ func _build_buttons() -> void:
 		queue_free())
 	row.add_child(cancel)
 
-func begin_drag(key: String, at: Vector2) -> void:
+var _touch_id := -2
+
+func begin_drag(key: String, touch: int, at: Vector2) -> void:
 	_drag = key
+	_touch_id = touch
 	var n: Control = _nodes[key]
 	_grab = at - n.position
+	(n as _Handle).set_down(true)
 
-func drag_to(at: Vector2) -> void:
+func _drag_to(at: Vector2) -> void:
 	if _drag == "":
 		return
 	var n: Control = _nodes[_drag]
-	var r := n.size.x * 0.5
 	var s := get_viewport_rect().size
 	# لا يخرج زر عن الشاشة: زرّ لا يُرى لا يُضغط
 	n.position = Vector2(
 		clampf(at.x - _grab.x, 0.0, s.x - n.size.x),
 		clampf(at.y - _grab.y, 0.0, s.y - n.size.y))
 
-func end_drag() -> void:
+func _end_drag() -> void:
+	if _drag != "" and _nodes.has(_drag):
+		(_nodes[_drag] as _Handle).set_down(false)
 	_drag = ""
+	_touch_id = -2
+
+## التقاط الحركة على مستوى الشاشة كلها لا داخل المقبض وحده
+func _input(event: InputEvent) -> void:
+	if _drag == "":
+		return
+	if event is InputEventScreenDrag:
+		var d := event as InputEventScreenDrag
+		if _touch_id == -1 or d.index == _touch_id:
+			_drag_to(d.position)
+			get_viewport().set_input_as_handled()
+	elif event is InputEventScreenTouch:
+		var t := event as InputEventScreenTouch
+		if not t.pressed and (_touch_id == -1 or t.index == _touch_id):
+			_end_drag()
+			get_viewport().set_input_as_handled()
+	elif event is InputEventMouseMotion and _touch_id == -1:
+		_drag_to((event as InputEventMouseMotion).position)
+		get_viewport().set_input_as_handled()
+	elif event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
+			_end_drag()
+			get_viewport().set_input_as_handled()
 
 func _save() -> void:
 	var s := get_viewport_rect().size
@@ -177,31 +206,26 @@ class _Handle:
 		mouse_filter = Control.MOUSE_FILTER_STOP
 		_font = UITheme.load_font(UITheme.FONT_REGULAR)
 
+	func set_down(v: bool) -> void:
+		if _down == v:
+			return
+		_down = v
+		queue_redraw()
+
 	func _gui_input(event: InputEvent) -> void:
+		# المقبض يبلّغ ببداية اللمس فقط. المتابعة على مستوى المحرّر
+		# لأن الإصبع يخرج عن الدائرة فور تحرّكه، فتتوقّف أحداث
+		# ‎_gui_input‎ وينقطع السحب — وهذا ما كان يحدث.
 		if event is InputEventScreenTouch:
 			var t := event as InputEventScreenTouch
 			if t.pressed:
-				_down = true
-				editor.begin_drag(key, position + t.position)
-			else:
-				_down = false
-				editor.end_drag()
-			accept_event()
-		elif event is InputEventScreenDrag and _down:
-			editor.drag_to(position + (event as InputEventScreenDrag).position)
-			accept_event()
+				editor.begin_drag(key, t.index, global_position + t.position)
+				accept_event()
 		elif event is InputEventMouseButton:
 			var mb := event as InputEventMouseButton
-			if mb.button_index == MOUSE_BUTTON_LEFT:
-				_down = mb.pressed
-				if mb.pressed:
-					editor.begin_drag(key, position + mb.position)
-				else:
-					editor.end_drag()
+			if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
+				editor.begin_drag(key, -1, global_position + mb.position)
 				accept_event()
-		elif event is InputEventMouseMotion and _down:
-			editor.drag_to(position + (event as InputEventMouseMotion).position)
-			accept_event()
 
 	func _draw() -> void:
 		var c := size * 0.5

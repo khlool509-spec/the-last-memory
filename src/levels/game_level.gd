@@ -171,6 +171,23 @@ func _wire() -> void:
 	# خبز الخريطة المصغّرة مرّة واحدة من بيانات العالم نفسها.
 	# البديل — كاميرا ثانية تصوّر من فوق كل إطار — يكلّف ثلث معدّل
 	# الإطارات على معالج جوال، وهو ثمن لا يستحقّه مربّع صغير.
+	# معالم الشريط: المباني والبوابة والنهر. الشريط يصير خريطة
+	# اتجاهات لا مجرّد درجات — تلتفت حتى يتوسّط المعلم ثم تمشي.
+	if hud.compass:
+		var lms: Array = []
+		for nm in ["AncientGate", "OldHouse", "Hut", "Bridge", "Camp"]:
+			var n := _find_named(self, nm)
+			if n is Node3D:
+				lms.append({
+					"pos": Vector2((n as Node3D).global_position.x,
+						(n as Node3D).global_position.z),
+					"name": {"AncientGate": "البوابة", "OldHouse": "البيت",
+						"Hut": "الكوخ", "Bridge": "الجسر",
+						"Camp": "المخيّم"}.get(nm, nm),
+					"color": Color(1.0, 0.86, 0.45),
+				})
+		hud.compass.set_landmarks(lms)
+
 	if hud.minimap:
 		var wp := WorldProfile.new()
 		hud.minimap.world_half = WorldProfile.HALF
@@ -211,6 +228,16 @@ func _mark_chapter_reached() -> void:
 	SaveSystem.unlock_chapter(chapter_index)
 	SaveSystem.data["player_position"] = [player.position.x, player.position.y, player.position.z]
 	SaveSystem.save_game()
+
+## بحث بالاسم في الشجرة — تحتاجه معالم البوصلة
+func _find_named(root: Node, nm: String) -> Node:
+	if root.name == nm:
+		return root
+	for c in root.get_children():
+		var r := _find_named(c, nm)
+		if r != null:
+			return r
+	return null
 
 func _feed_hud() -> void:
 	if player == null or hud == null:
