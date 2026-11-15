@@ -44,39 +44,72 @@ func _test_project_settings() -> void:
 	else:
 		_no("اسم المشروع", name)
 
-	# Forward+ قرار مقصود: مصيّر Mobile في Godot لا يدعم SSAO ولا SSIL
-	# ولا الضباب الحجمي، وهي ما تصنع الإضاءة السينمائية المطلوبة.
+	# العقد الجوالي: اللعبة لكروت الجوال حصراً. قياس على S22 Ultra
+	# أعطى 7 إطارات مع Forward+، وهو مصيّر كروت الحاسب. هذه
+	# الاختبارات تحرس القرار فلا يعود أحد إلى الإعدادات المكتبية.
 	var method := str(ProjectSettings.get_setting("rendering/renderer/rendering_method", ""))
-	if method == "forward_plus":
-		_ok("الـ Renderer = forward_plus")
+	if method == "mobile":
+		_ok("الـ Renderer = mobile")
 	else:
-		_no("الـ Renderer = forward_plus", method)
+		_no("الـ Renderer = mobile", method)
 
 	var mobile_override := str(ProjectSettings.get_setting("rendering/renderer/rendering_method.mobile", ""))
-	if mobile_override == "forward_plus":
-		_ok("تجاوز الـ Renderer للمحمول = forward_plus")
+	if mobile_override == "mobile":
+		_ok("تجاوز الـ Renderer للمحمول = mobile")
 	else:
-		_no("تجاوز الـ Renderer للمحمول = forward_plus", mobile_override)
+		_no("تجاوز الـ Renderer للمحمول = mobile", mobile_override)
 
-	# الإضاءة السينمائية: هذه الإعدادات هي ما يفصل الظل الأسود الحادّ
-	# عن الظل الليّن المملوء. تُختبَر صراحةً فلا تُفقَد في تعديل لاحق.
-	var msaa := int(ProjectSettings.get_setting("rendering/anti_aliasing/quality/msaa_3d", 0))
-	if msaa >= 2:
-		_ok("MSAA ≥ 4× (%d)" % msaa)
+	# قيم جوالية: أعلى من هذه يلتهم عرض النطاق على معالج tile-based.
+	var msaa := int(ProjectSettings.get_setting("rendering/anti_aliasing/quality/msaa_3d", 99))
+	if msaa <= 1:
+		_ok("MSAA أساسه منخفض (%d)" % msaa)
 	else:
-		_no("MSAA ≥ 4×", str(msaa))
+		_no("MSAA ≤ 2×", str(msaa))
 
-	var aniso := int(ProjectSettings.get_setting("rendering/textures/default_filters/anisotropic_filtering_level", 0))
-	if aniso >= 4:
-		_ok("ترشيح تباين الاتجاه 16× (%d)" % aniso)
+	var aniso := int(ProjectSettings.get_setting("rendering/textures/default_filters/anisotropic_filtering_level", 99))
+	if aniso <= 2:
+		_ok("ترشيح تباين الاتجاه جوالي (%d)" % aniso)
 	else:
-		_no("ترشيح تباين الاتجاه 16×", str(aniso))
+		_no("ترشيح تباين الاتجاه ≤ 4×", str(aniso))
 
-	var soft := int(ProjectSettings.get_setting("rendering/lights_and_shadows/directional_shadow/soft_shadow_filter_quality", 0))
-	if soft >= 3:
-		_ok("جودة مرشّح الظل الليّن عالية (%d)" % soft)
+	var soft := int(ProjectSettings.get_setting("rendering/lights_and_shadows/directional_shadow/soft_shadow_filter_quality", 99))
+	if soft <= 1:
+		_ok("مرشّح الظل الليّن جوالي (%d)" % soft)
 	else:
-		_no("جودة مرشّح الظل الليّن عالية", str(soft))
+		_no("مرشّح الظل الليّن ≤ 1", str(soft))
+
+	# صيغة خامات الحاسب يجب أن تبقى مطفأة: لا فائدة منها على الجوال.
+	if not bool(ProjectSettings.get_setting("rendering/textures/vram_compression/import_s3tc_bptc", true)):
+		_ok("صيغة خامات الحاسب مطفأة")
+	else:
+		_no("import_s3tc_bptc مطفأ", "true")
+
+	# حارس الانحدار الأهم: خامة واحدة بلا ضغط تكلّف 16 MB في ذاكرة
+	# الـGPU، وخامة بلا mipmaps تُشعل عرض النطاق وتُظهر تلمّعاً في
+	# المسافة. كلاهما كان سبب السبعة فريم. لا يمرّ أي منهما مجدداً.
+	var bad_c := 0
+	var bad_m := 0
+	for d in ["res://assets/textures/pbr_1k", "res://assets/textures/pbr_512",
+			"res://assets/textures/world"]:
+		var dir := DirAccess.open(d)
+		if dir == null:
+			continue
+		for f in dir.get_files():
+			if not f.ends_with(".import"):
+				continue
+			var txt := FileAccess.get_file_as_string(d + "/" + f)
+			if txt.contains("compress/mode=0"):
+				bad_c += 1
+			if txt.contains("mipmaps/generate=false"):
+				bad_m += 1
+	if bad_c == 0:
+		_ok("كل خامات اللعبة مضغوطة لذاكرة الـGPU")
+	else:
+		_no("خامات بلا ضغط", str(bad_c))
+	if bad_m == 0:
+		_ok("كل خامات اللعبة لها mipmaps")
+	else:
+		_no("خامات بلا mipmaps", str(bad_m))
 
 	if bool(ProjectSettings.get_setting("rendering/textures/vram_compression/import_etc2_astc", false)):
 		_ok("ضغط ETC2/ASTC مفعّل")

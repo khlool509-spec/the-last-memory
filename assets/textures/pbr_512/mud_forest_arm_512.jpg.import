@@ -3,19 +3,21 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cqeycnc6tw27m"
-path="res://.godot/imported/mud_forest_arm_512.jpg-b6c5e2ab89e92ef8dd9f59828f563fee.ctex"
+path.s3tc="res://.godot/imported/mud_forest_arm_512.jpg-b6c5e2ab89e92ef8dd9f59828f563fee.s3tc.ctex"
+path.etc2="res://.godot/imported/mud_forest_arm_512.jpg-b6c5e2ab89e92ef8dd9f59828f563fee.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/textures/pbr_512/mud_forest_arm_512.jpg"
-dest_files=["res://.godot/imported/mud_forest_arm_512.jpg-b6c5e2ab89e92ef8dd9f59828f563fee.ctex"]
+dest_files=["res://.godot/imported/mud_forest_arm_512.jpg-b6c5e2ab89e92ef8dd9f59828f563fee.s3tc.ctex", "res://.godot/imported/mud_forest_arm_512.jpg-b6c5e2ab89e92ef8dd9f59828f563fee.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -23,7 +25,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""
