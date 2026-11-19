@@ -25,6 +25,8 @@ signal fired()
 @export var max_stamina: float = 100.0
 @export var stamina_drain: float = 22.0
 @export var stamina_regen: float = 16.0
+@export var floor_snap_length: float = 0.55
+@export var floor_safe_margin: float = 0.035
 
 var move_dir: Vector2 = Vector2.ZERO
 var want_run: bool = false
@@ -41,6 +43,9 @@ var in_water: bool = false
 var submerged: bool = false
 var camera_basis_yaw: float = 0.0
 var stamina: float = 100.0
+var mod_fly_enabled: bool = false
+var mod_fly_speed: float = 8.0
+var mod_fly_vertical: float = 0.0
 
 var _gravity: float = 9.8
 var _grounding_ready := false
@@ -59,6 +64,8 @@ const STEP_RUN := 2.6
 func _ready() -> void:
 	_gravity = float(ProjectSettings.get_setting("physics/3d/default_gravity", 9.8))
 	stamina = max_stamina
+	safe_margin = floor_safe_margin
+	floor_max_angle = deg_to_rad(55.0)
 	_grounding_ready = true
 
 func set_move_input(dir: Vector2) -> void:
@@ -80,6 +87,18 @@ func set_fire(active: bool) -> void:
 
 func set_swim_vertical(dir: int) -> void:
 	swim_vert = clampi(dir, -1, 1)
+
+func set_mod_fly(active: bool) -> void:
+	mod_fly_enabled = active
+	mod_fly_vertical = 0.0
+	if active:
+		velocity = Vector3.ZERO
+
+func set_mod_fly_speed(value: float) -> void:
+	mod_fly_speed = clampf(value, 2.0, 30.0)
+
+func set_mod_fly_vertical(value: float) -> void:
+	mod_fly_vertical = clampf(value, -1.0, 1.0)
 
 ## دورة الأوضاع: وقوف ← قرفصاء ← وقوف. الانبطاح زرّ مستقل.
 func toggle_crouch() -> void:
@@ -142,6 +161,10 @@ func state_label() -> String:
 	return "مشي"
 
 func _physics_process(delta: float) -> void:
+	if mod_fly_enabled:
+		_process_mod_fly(delta)
+		return
+
 	_update_water(delta)
 
 	if in_water:
@@ -206,6 +229,10 @@ func _physics_process(delta: float) -> void:
 	else:
 		_fire_cd = 0.0
 
+	if _grounding_ready and not in_water and not is_on_floor() and velocity.y <= 0.0:
+		floor_snap_length = maxf(floor_snap_length, 0.55)
+		apply_floor_snap()
+
 	move_and_slide()
 	if not in_water:
 		_update_footsteps(delta)
@@ -215,6 +242,15 @@ func _physics_process(delta: float) -> void:
 		Audio.play_surface_step(surface, true)
 	_was_on_floor = is_on_floor()
 
+
+func _process_mod_fly(delta: float) -> void:
+	var eff := move_dir
+	var input3 := Vector3(eff.x, mod_fly_vertical, eff.y)
+	var dir := input3.rotated(Vector3.UP, camera_basis_yaw)
+	if dir.length() > 1.0:
+		dir = dir.normalized()
+	velocity = dir * mod_fly_speed
+	move_and_slide()
 
 ## ══════════ الماء ══════════
 ## منسوب الماء ثابت في هذا الفصل، فلا حاجة لاستعلام فيزيائي كل إطار.
