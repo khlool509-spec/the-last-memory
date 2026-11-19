@@ -279,10 +279,11 @@ jobs:
           unzip -tq "$APK" >/dev/null
           "$GODOT_BIN/aapt" dump badging "$APK" > build/apk-badging.txt
           grep -q "package: name='com.novence.thelastmemory'" build/apk-badging.txt
-          unzip -Z1 "$APK" | grep -qx 'AndroidManifest.xml'
-          unzip -Z1 "$APK" | grep -qx 'lib/arm64-v8a/libgodot_android.so'
-          unzip -Z1 "$APK" | grep -qx 'lib/arm64-v8a/libterrain.android.debug.arm64.so'
-          unzip -Z1 "$APK" | grep -qx 'lib/arm64-v8a/libterrain.android.release.arm64.so'
+          unzip -Z1 "$APK" > build/apk-file-list.txt
+          grep -qx 'AndroidManifest.xml' build/apk-file-list.txt
+          grep -qx 'lib/arm64-v8a/libgodot_android.so' build/apk-file-list.txt
+          grep -qx 'lib/arm64-v8a/libterrain.android.debug.arm64.so' build/apk-file-list.txt
+          grep -qx 'lib/arm64-v8a/libterrain.android.release.arm64.so' build/apk-file-list.txt
           test -s "$APK"
           file "$APK"
           ls -lh "$APK"
