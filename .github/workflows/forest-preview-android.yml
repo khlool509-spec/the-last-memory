@@ -1,4 +1,4 @@
-name: Forest Preview Android APK
+name: Forest Integration Android APK
 
 on:
   push:
@@ -7,21 +7,24 @@ on:
     paths:
       - ".github/workflows/forest-preview-android.yml"
       - "FOREST_PREVIEW.md"
+      - "src/levels/forest_preview.gd"
+      - "levels/ch01_forest/forest_preview.tscn"
+      - "project.godot"
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build-forest-preview:
-    name: Build standalone forest preview APK
+  build-forest-integration:
+    name: Build playable forest integration APK
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     env:
-      GODOT_VERSION: "4.6.3"
+      GODOT_VERSION: "4.7.2"
       GODOT_STATUS: stable
     steps:
-      - name: Checkout game repository
+      - name: Checkout integration branch
         uses: actions/checkout@v4
         with:
           ref: integration/forest-godot4
@@ -31,68 +34,23 @@ jobs:
           set -e
           git clone --depth 1 https://github.com/Lakshman-YT/Forest-Godot4.git forest_preview
 
-      - name: Configure forest for Android Mobile renderer
+      - name: Bring authored forest into THE LAST MEMORY
         run: |
           set -e
-          cd forest_preview
-          if ! grep -q '^renderer/rendering_method=' project.godot; then
-            cat >> project.godot <<'EOF'
-
-          [rendering]
-          renderer/rendering_method="mobile"
-          renderer/rendering_method.mobile="mobile"
-          EOF
-          fi
-          cat > export_presets.cfg <<'EOF'
-          [preset.0]
-          name="Android"
-          platform="Android"
-          runnable=true
-          advanced_options=false
-          dedicated_server=false
-          custom_features=""
-          export_filter="all_resources"
-          include_filter=""
-          exclude_filter="images/*,*.md,*.txt"
-          export_path="../build/forest_preview.apk"
-          patches=PackedStringArray()
-          encryption_include_filters=""
-          encryption_exclude_filters=""
-          seed=0
-          encrypt_pck=false
-          encrypt_directory=false
-          script_export_mode=2
-
-          [preset.0.options]
-          custom_template/debug=""
-          custom_template/release=""
-          gradle_build/use_gradle_build=false
-          gradle_build/export_format=0
-          architectures/armeabi-v7a=false
-          architectures/arm64-v8a=true
-          architectures/x86=false
-          architectures/x86_64=false
-          version/code=1
-          version/name="0.1.0"
-          package/unique_name="com.novence974.forestpreview"
-          package/name="THE LAST MEMORY - Forest Preview"
-          package/signed=false
-          screen/immersive_mode=true
-          screen/support_small=true
-          screen/support_normal=true
-          screen/support_large=true
-          screen/support_xlarge=true
-          permissions/custom_permissions=PackedStringArray()
-          EOF
-          # Reuse the project's proven Android preset, then adapt it for the isolated forest app.
-          cp ../export_presets.cfg export_presets.cfg
-          sed -i 's|^export_path=.*|export_path="../build/forest_preview.apk"|' export_presets.cfg
-          sed -i 's|^package/unique_name=.*|package/unique_name="com.novence974.forestpreview"|' export_presets.cfg
-          sed -i 's|^package/name=.*|package/name="THE LAST MEMORY - Forest Preview"|' export_presets.cfg
-          sed -i 's|^package/signed=.*|package/signed=true|' export_presets.cfg
-          sed -i '/^launcher_icons\//d' export_presets.cfg
-          mkdir -p ci
-          cp ../ci/thelastmemory.keystore ci/thelastmemory.keystore
+          # Preserve the forest project's res:// paths so world.tscn remains intact.
+          cp -a forest_preview/world.tscn ./world.tscn
+          cp -a "forest_preview/env models" "./env models"
+          cp -a "forest_preview/terrain mat" "./terrain mat"
+          mkdir -p addons
+          cp -a forest_preview/addons/sky_3d addons/
+          cp -a forest_preview/addons/terrain_3d addons/
+          # The source project contains a demo player/UI; our preview script removes
+          # those nodes at runtime and uses THE LAST MEMORY's mobile Player + HUD.
+          find "env models" "terrain mat" addons/sky_3d addons/terrain_3d -type f \
+            \( -name "*.tscn" -o -name "*.tres" -o -name "*.gd" -o -name "*.cfg" \) \
+            -print0 | xargs -0 grep -Il "D:/" 2>/dev/null | while read -r f; do
+              sed -i 's|D:/assets/|res://|g; s|D:\\\\assets\\\\|res://|g' "$f"
+            done || true
 
       - name: Install Java 17
         uses: actions/setup-java@v4
@@ -111,7 +69,7 @@ jobs:
           echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
           echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
 
-      - name: Install Godot 4.6.3 and export templates
+      - name: Install Godot 4.7.2 and export templates
         run: |
           set -e
           TAG="${GODOT_VERSION}-${GODOT_STATUS}"
@@ -120,23 +78,61 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp/godot
           install -m 755 "/tmp/godot/Godot_v${TAG}_linux.x86_64" "$HOME/godot-bin/godot"
           curl -fsSL -o /tmp/templates.tpz "https://github.com/godotengine/godot-builds/releases/download/$TAG/Godot_v${TAG}_export_templates.tpz"
-          mkdir -p /tmp/godot-templates
           unzip -q /tmp/templates.tpz -d /tmp/godot-templates
           cp -a /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_STATUS}/"
           echo "$HOME/godot-bin" >> "$GITHUB_PATH"
           export PATH="$HOME/godot-bin:$PATH"
           godot --version
 
-      - name: Import and validate forest project
+      - name: Create clean Android export preset
         run: |
-          set -e
-          godot --headless --editor --path forest_preview --import
-          godot --headless --path forest_preview --quit-after 30
+          cat > export_presets.cfg <<'EOF'
+          [preset.0]
+          name="Android"
+          platform="Android"
+          runnable=true
+          advanced_options=false
+          dedicated_server=false
+          custom_features=""
+          export_filter="all_resources"
+          include_filter=""
+          exclude_filter="docs/*,tests/*,tools/*,shots/*,*.md,*.sh,VERSION"
+          export_path="build/the_last_memory_forest.apk"
+          patches=PackedStringArray()
+          encryption_include_filters=""
+          encryption_exclude_filters=""
+          seed=0
+          encrypt_pck=false
+          encrypt_directory=false
+          script_export_mode=2
 
-      - name: Export Android APK (arm64)
+          [preset.0.options]
+          custom_template/debug=""
+          custom_template/release=""
+          gradle_build/use_gradle_build=false
+          gradle_build/export_format=0
+          architectures/armeabi-v7a=false
+          architectures/arm64-v8a=true
+          architectures/x86=false
+          architectures/x86_64=false
+          version/code=15
+          version/name="0.14.0-forest"
+          package/unique_name="com.novence.thelastmemory.forest"
+          package/name="THE LAST MEMORY"
+          package/signed=false
+          screen/immersive_mode=true
+          screen/support_small=true
+          screen/support_normal=true
+          screen/support_large=true
+          screen/support_xlarge=true
+          user_data_backup/allow=false
+          command_line/extra_args=""
+          permissions/custom_permissions=PackedStringArray()
+          EOF
+
+      - name: Import and validate THE LAST MEMORY + authored forest
         run: |
           set -e
-          mkdir -p build
           mkdir -p "$HOME/.config/godot"
           printf '%s\n' \
             '[gd_resource type="EditorSettings" format=3]' \
@@ -144,21 +140,26 @@ jobs:
             '[resource]' \
             "export/android/android_sdk_path = \"$ANDROID_SDK_ROOT\"" \
             "export/android/java_sdk_path = \"$JAVA_HOME\"" \
-            > "$HOME/.config/godot/editor_settings-4.6.tres"
-          echo "--- Android export preset ---"
-          sed -n '/^\[preset.0\]/,/^\[preset.1\]/p' forest_preview/export_presets.cfg
-          godot --headless --verbose --path forest_preview --export-debug "Android" build/forest_preview.apk
-          test -s build/forest_preview.apk
-          file build/forest_preview.apk
-          unzip -l build/forest_preview.apk | grep -q "AndroidManifest.xml"
-          unzip -l build/forest_preview.apk | grep -q "lib/arm64-v8a/libgodot_android.so"
-          ls -lh build/forest_preview.apk
+            > "$HOME/.config/godot/editor_settings-4.7.tres"
+          godot --headless --editor --path . --import
+          godot --headless --path . --quit-after 20
+
+      - name: Export playable Android APK (arm64)
+        run: |
+          set -e
+          mkdir -p build
+          godot --headless --verbose --path . --export-debug "Android" build/the_last_memory_forest.apk
+          test -s build/the_last_memory_forest.apk
+          file build/the_last_memory_forest.apk
+          unzip -l build/the_last_memory_forest.apk | grep -q "AndroidManifest.xml"
+          unzip -l build/the_last_memory_forest.apk | grep -q "lib/arm64-v8a/libgodot_android.so"
+          ls -lh build/the_last_memory_forest.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: forest-preview-android-apk
-          path: build/forest_preview.apk
+          name: the-last-memory-forest-android-apk
+          path: build/the_last_memory_forest.apk
           retention-days: 30
 
       - name: Publish downloadable preview release
@@ -166,9 +167,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          TAG="forest-preview-latest"
+          TAG="forest-integration-latest"
           gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
-          gh release create "$TAG" build/forest_preview.apk \
-            --title "THE LAST MEMORY - Forest Preview APK" \
-            --notes "Standalone visual preview of Forest-Godot4. This is not yet integrated with the THE LAST MEMORY player, story, or gameplay systems." \
+          gh release create "$TAG" build/the_last_memory_forest.apk \
+            --title "THE LAST MEMORY - Forest Integration" \
+            --notes "Playable Android preview: authored Forest-Godot4 terrain/foliage with THE LAST MEMORY mobile player and HUD. Integration branch only." \
             --latest=false
