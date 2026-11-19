@@ -166,7 +166,7 @@ func _test_audio() -> void:
 		_true("مسار الصوت %s موجود" % bus, AudioServer.get_bus_index(bus) >= 0)
 
 	var missing := 0
-	var not_wav := 0
+	var invalid_audio := 0
 	var total := 0
 	for group in [Audio.MUSIC, Audio.AMBIENT, Audio.SFX]:
 		for key in group:
@@ -177,13 +177,12 @@ func _test_audio() -> void:
 				print("    مفقود: ", path)
 				continue
 			var st: AudioStream = ResourceLoader.load(path)
-			if not (st is AudioStreamWAV):
-				not_wav += 1
-			elif st.get_length() <= 0.0:
-				not_wav += 1
+			var valid_type := (st is AudioStreamMP3) if str(key) == "menu" else (st is AudioStreamWAV)
+			if not valid_type or st.get_length() <= 0.0:
+				invalid_audio += 1
 	_true("كل الملفات معرّفة (%d)" % total, total >= 12)
 	_eq("لا ملف مفقود", missing, 0)
-	_eq("كلها WAV بطول صالح", not_wav, 0)
+	_eq("موسيقى القائمة MP3 وبقية الأصوات WAV وصالحة", invalid_audio, 0)
 
 	Audio.play_ambient("forest")
 	var amb: AudioStreamWAV = Audio._ambient.stream as AudioStreamWAV
@@ -204,10 +203,11 @@ func _test_audio() -> void:
 		_true("طول الأجواء كافٍ (%.1f ث)" % amb.get_length(), amb.get_length() > 10.0)
 
 	Audio.play_music("menu")
-	var mus: AudioStreamWAV = Audio._music.stream as AudioStreamWAV
-	_true("الموسيقى محمّلة", mus != null)
+	var mus: AudioStreamMP3 = Audio._music.stream as AudioStreamMP3
+	_true("موسيقى القائمة MP3 محمّلة", mus != null)
 	if mus != null:
-		_eq("الموسيقى تتكرر", mus.loop_mode, AudioStreamWAV.LOOP_FORWARD)
+		_true("موسيقى القائمة تتكرر بلا توقف", mus.loop)
+		_true("بداية التكرار من أول المقطع", is_zero_approx(mus.loop_offset))
 		_true("طول الموسيقى كافٍ (%.1f ث)" % mus.get_length(), mus.get_length() > 20.0)
 
 	# أصوات متعددة متتابعة: تتوزّع على أصوات مختلفة فلا تقطع بعضها
