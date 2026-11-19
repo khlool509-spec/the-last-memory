@@ -61,11 +61,10 @@ func _ready() -> void:
 	_build_look_area()
 	_build_joystick()
 	_build_actions()
-	_build_combat()
+	# لا أسلحة ولا ذخيرة؛ التحكم هنا مخصص للاستكشاف والتفاعل.
 	_build_compass()
 	_build_minimap()
 	_build_coords()
-	_build_weapons()
 	_apply_saved_layout()
 	_build_status()
 	_build_objective()
@@ -110,7 +109,7 @@ func _build_actions() -> void:
 	_root.add_child(holder)
 
 	btn_interact = ActionButton.new()
-	btn_interact.glyph = "✋"
+	btn_interact.glyph = "◉"
 	btn_interact.label_text = "تفاعل"
 	btn_interact.radius = 62.0
 	btn_interact.accent = Palette.MOON_DIM
@@ -119,7 +118,7 @@ func _build_actions() -> void:
 	holder.add_child(btn_interact)
 
 	btn_jump = ActionButton.new()
-	btn_jump.glyph = "⤒"
+	btn_jump.glyph = "↑"
 	btn_jump.label_text = "قفز"
 	btn_jump.radius = 52.0
 	btn_jump.position = Vector2(168, 128)
@@ -136,7 +135,7 @@ func _build_actions() -> void:
 	holder.add_child(btn_run)
 
 	btn_inventory = ActionButton.new()
-	btn_inventory.glyph = "▤"
+	btn_inventory.glyph = "▱"
 	btn_inventory.label_text = "الحقيبة"
 	btn_inventory.radius = 42.0
 	btn_inventory.accent = Palette.DUST
