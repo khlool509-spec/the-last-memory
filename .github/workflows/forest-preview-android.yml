@@ -185,6 +185,10 @@ jobs:
           echo "$HOME/godot-bin" >> "$GITHUB_PATH"
           export PATH="$HOME/godot-bin:$PATH"
           godot --version
+          # Gradle Android exports require the project-local Android build template.
+          # Install it after the editor/export templates are available in this clean CI checkout.
+          godot --headless --path . --editor --install-android-build-template
+          test -f android/build/gradlew
 
       - name: Create clean Android export preset
         run: |
