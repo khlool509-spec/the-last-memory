@@ -34,6 +34,21 @@ func _ready() -> void:
 	_check("touch look area exists", level.hud != null and level.hud.look_area != null)
 	_check("HUD movement signal is connected", level.hud != null and level.hud.move_input.get_connections().size() > 0)
 	_check("mod menu is mounted", level.mod_menu != null)
+
+	var follow_camera: Camera3D = level.cam.get_camera() if level.cam != null else null
+	_check("third-person camera exists and is current",
+		follow_camera != null and follow_camera.current)
+
+	var has_sun := false
+	var stack: Array[Node] = [level.forest_root] if level.forest_root != null else []
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		if node is DirectionalLight3D:
+			has_sun = true
+		for child in node.get_children():
+			stack.append(child)
+	_check("authored forest has directional sunlight", has_sun)
+
 	if level.player:
 		_check("player collision mask includes Terrain3D",
 			(level.player.collision_mask & terrain_layer) == terrain_layer,
