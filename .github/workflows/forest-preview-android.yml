@@ -103,13 +103,13 @@ jobs:
                               raise SystemExit(f"Replacement texture is missing: {target}")
                           line = line.replace(old, os.path.relpath(target, mtl.parent))
                   rewritten.append(line)
-              mtl.write_text("\\n".join(rewritten) + "\\n", encoding="utf-8")
+              mtl.write_text("\n".join(rewritten) + "\n", encoding="utf-8")
 
           for folder in [Path("env models"), Path("terrain mat"), Path("addons")]:
               for path in folder.rglob("*"):
                   if path.is_file() and path.suffix.lower() in {".mtl", ".tscn", ".tres", ".gd", ".cfg", ".gdshader", ".gdshaderinc"}:
                       data = path.read_text(encoding="utf-8", errors="ignore")
-                      if "D:/assets/extracted/" in data or "C:/Users/Admin/Documents/terrain/" in data:
+                      if re.search(r"(?i)\\b[a-z]:[\\\\/]", data):
                           raise SystemExit(f"Unresolved Windows asset path in {path}")
           PY
 
