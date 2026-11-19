@@ -89,8 +89,10 @@ jobs:
           sed -i 's|^export_path=.*|export_path="../build/forest_preview.apk"|' export_presets.cfg
           sed -i 's|^package/unique_name=.*|package/unique_name="com.novence974.forestpreview"|' export_presets.cfg
           sed -i 's|^package/name=.*|package/name="THE LAST MEMORY - Forest Preview"|' export_presets.cfg
-          sed -i 's|^package/signed=.*|package/signed=false|' export_presets.cfg
-          sed -i '/^keystore\//d; /^launcher_icons\//d' export_presets.cfg
+          sed -i 's|^package/signed=.*|package/signed=true|' export_presets.cfg
+          sed -i '/^launcher_icons\//d' export_presets.cfg
+          mkdir -p ci
+          cp ../ci/thelastmemory.keystore ci/thelastmemory.keystore
 
       - name: Install Java 17
         uses: actions/setup-java@v4
