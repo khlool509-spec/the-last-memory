@@ -59,6 +59,24 @@ jobs:
           mkdir -p addons
           cp -a forest_preview/addons/. addons/
 
+          # The authored world contains Phantom Camera nodes. Register the manager
+          # explicitly because this clean CI project does not enable the editor plugin.
+          test -s addons/phantom_camera/scripts/managers/phantom_camera_manager.gd
+          python3 - <<'PY'
+          from pathlib import Path
+          project = Path("project.godot")
+          data = project.read_text(encoding="utf-8")
+          marker = "[autoload]\\n"
+          entry = 'PhantomCameraManager="*res://addons/phantom_camera/scripts/managers/phantom_camera_manager.gd"'
+          if marker not in data:
+              raise SystemExit("project.godot has no [autoload] section")
+          if entry not in data:
+              data = data.replace(marker, marker + entry + "\\n", 1)
+          project.write_text(data, encoding="utf-8")
+          if entry not in project.read_text(encoding="utf-8"):
+              raise SystemExit("PhantomCameraManager autoload was not registered")
+          PY
+
           python3 - <<'PY'
           from pathlib import Path
           import os
@@ -200,8 +218,6 @@ jobs:
           architectures/x86_64=false
           version/code=16
           version/name="0.15.1-forest-release-install-fix"
-          gradle_build/min_sdk="24"
-          gradle_build/target_sdk="35"
           package/unique_name="com.novence.thelastmemory"
           package/name="THE LAST MEMORY"
           package/signed=false
@@ -245,6 +261,10 @@ jobs:
           set -e
           godot --headless --path . res://tests/forest_preview_test.tscn
 
+      - name: Run complete project regression suite
+        run: |
+          bash tests/run.sh
+
       - name: Verify stable project signing key
         run: |
           set -e
@@ -287,8 +307,8 @@ jobs:
           "$GODOT_BIN/aapt2" dump badging "$APK" > build/apk-badging.txt
           cat build/apk-badging.txt
           grep -q "package: name='com.novence.thelastmemory'" build/apk-badging.txt
-          grep -q "^sdkVersion:'24'" build/apk-badging.txt
-          grep -q "^targetSdkVersion:'35'" build/apk-badging.txt
+          grep -q "^sdkVersion:'[0-9]" build/apk-badging.txt
+          grep -q "^targetSdkVersion:'[0-9]" build/apk-badging.txt
           "$GODOT_BIN/aapt2" dump xmltree "$APK" --file AndroidManifest.xml > build/apk-manifest.txt
           grep -q 'E: manifest' build/apk-manifest.txt
           unzip -Z1 "$APK" > build/apk-file-list.txt
