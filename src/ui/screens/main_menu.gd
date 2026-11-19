@@ -143,9 +143,11 @@ func _intro_animation() -> void:
 func _on_item_pressed(id: String) -> void:
 	match id:
 		"new_game":
+			Audio.stop_music()
 			SaveSystem.start_new_game()
 			_choose_character()        # الاختيار قبل الدخول، كما طُلب
 		"continue":
+			Audio.stop_music()
 			SaveSystem.load_game()
 			_launch_game()
 		"settings":
