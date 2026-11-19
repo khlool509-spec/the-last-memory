@@ -322,6 +322,11 @@ func _test_all_scripts() -> void:
 		print("  (لا سكربتات بعد)")
 		return
 	for path in scripts:
+		# forest_preview is a staging clone of the vendor repository. Its add-ons
+		# are copied into res://addons above, so compiling the staging duplicates
+		# registers the same class_name twice and creates false failures.
+		if path.begins_with("res://forest_preview/"):
+			continue
 		var s := ResourceLoader.load(path)
 		if s == null:
 			_no("تحميل " + path.get_file(), "فشل")
