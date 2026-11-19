@@ -32,7 +32,7 @@ func build_world() -> void:
 	# become a second visible/collidable ground under the new terrain.
 	_disable_legacy_world_collision()
 
-	# Invisible oversized floor catches accidental falls through terrain gaps.
+	# Safety collision only: it prevents an infinite fall, but never teleports or reloads the player.
 	_create_ground_safety_zone()
 
 func place_contents() -> void:
