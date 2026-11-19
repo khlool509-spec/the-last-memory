@@ -214,7 +214,7 @@ jobs:
           # exact debug binary selected by --export-debug before signing.
           cp addons/terrain_3d/bin/libterrain.android.debug.arm64.so ci/apk-root/lib/arm64-v8a/
           file ci/apk-root/lib/arm64-v8a/libterrain.android.debug.arm64.so
-          zip -q -u build/the_last_memory_forest-unsigned.apk -j ci/apk-root/lib/arm64-v8a/libterrain.android.debug.arm64.so
+          (cd ci/apk-root && zip -q -u ../../build/the_last_memory_forest-unsigned.apk lib/arm64-v8a/libterrain.android.debug.arm64.so)
 
           "$ANDROID_HOME/build-tools/34.0.0/apksigner" sign --ks ci/debug.keystore --ks-pass pass:android \
             --key-pass pass:android --out build/the_last_memory_forest.apk build/the_last_memory_forest-unsigned.apk
