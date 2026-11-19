@@ -138,30 +138,6 @@ jobs:
           grep -q 'android.debug.arm64' addons/terrain_3d/terrain.gdextension
           grep -q 'android.release.arm64' addons/terrain_3d/terrain.gdextension
 
-      - name: Configure Mobile renderer and 60 FPS cap
-        run: |
-          set -e
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path("project.godot")
-          s = p.read_text()
-          if "[display]" not in s:
-              s += "\n[display]\n\n[display/window]\n\n[display/window/size]\n"
-          if "renderer/rendering_method" not in s:
-              s += "\n[rendering]\n\nrenderer/rendering_method="mobile"\nrenderer/rendering_method.mobile="mobile"\n"
-          if "application/run/main_scene" not in s:
-              pass
-          if "application/config/name" in s and "display/window/size/viewport_width" not in s:
-              s += "\n[display/window]\nsize/viewport_width=1920\nsize/viewport_height=1080\n"
-          s += "\n[display/window]\n\n[display/window/stretch]\nmode="canvas_items"\n"
-          if "application/run/main_scene" not in s:
-              pass
-          # Godot's 60 FPS cap is applied at runtime by the project.
-          if "application/config/name" in s and "run/max_fps" not in s:
-              s += "\n[application]\n\nrun/max_fps=60\n"
-          p.write_text(s)
-          PY
-
       - name: Import and validate THE LAST MEMORY + authored forest
         run: |
           set -e
@@ -174,7 +150,7 @@ jobs:
             "export/android/java_sdk_path = \"$JAVA_HOME\"" \
             > "$HOME/.config/godot/editor_settings-4.7.tres"
           godot --headless --editor --path . --import
-          godot --headless --path . --quit-after 20
+          godot --headless --path . --quit-after 20 --rendering-method mobile
 
       - name: Create Android debug.keystore and signing config
         run: |
