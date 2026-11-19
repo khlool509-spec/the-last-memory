@@ -117,6 +117,7 @@ jobs:
           unzip -q /tmp/templates.tpz -d /tmp/godot-templates
           cp -a /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/$TAG/"
           echo "$HOME/godot-bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/godot-bin:$PATH"
           godot --version
 
       - name: Import and validate forest project
