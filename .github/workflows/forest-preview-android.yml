@@ -198,9 +198,9 @@ jobs:
           architectures/arm64-v8a=true
           architectures/x86=false
           architectures/x86_64=false
-          version/code=15
-          version/name="0.14.0-forest"
-          package/unique_name="com.novence.thelastmemory.forest"
+          version/code=16
+          version/name="0.15.0-forest-install-fix"
+          package/unique_name="com.novence.thelastmemory"
           package/name="THE LAST MEMORY"
           package/signed=false
           screen/immersive_mode=true
@@ -240,42 +240,52 @@ jobs:
           set -e
           godot --headless --path . res://tests/forest_preview_test.tscn
 
-      - name: Create Android debug.keystore and signing config
+      - name: Verify stable project signing key
         run: |
           set -e
-          mkdir -p ci build
-          keytool -genkeypair -v -keystore ci/debug.keystore -storepass android -keypass android \
-            -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=Android Debug,O=Android,C=US" -noprompt
-          cp ci/debug.keystore "$HOME/.android/debug.keystore"
-          chmod 600 ci/debug.keystore
-
-      - name: Export, package Terrain3D ARM64 debug+release, and sign Android APK
+          test -s ci/thelastmemory.keystore
+          keytool -list -keystore ci/thelastmemory.keystore -storepass thelastmemory -alias thelastmemory >/dev/null
+      - name: Export, align, sign, and validate Android APK
         run: |
-          set -e
+          set -euo pipefail
           mkdir -p build ci/apk-root/lib/arm64-v8a
-          godot --headless --verbose --path . --export-debug "Android" build/the_last_memory_forest-unsigned.apk
-          test -s build/the_last_memory_forest-unsigned.apk
+          APK="build/the_last_memory_forest.apk"
+          UNSIGNED="build/the_last_memory_forest-unsigned.apk"
+          ALIGNED="build/the_last_memory_forest-aligned.apk"
+          GODOT_BIN="$ANDROID_HOME/build-tools/35.0.0"
+          godot --headless --verbose --path . --export-debug "Android" "$UNSIGNED"
+          test -s "$UNSIGNED"
 
-          # Godot 4.7.2's standard APK export does not reliably place this
-          # project's standalone Terrain3D GDExtension in lib/<abi>; add the
-          # exact debug binary selected by --export-debug before signing.
+          # Add the Terrain3D runtime libraries before final APK alignment.
           cp addons/terrain_3d/bin/libterrain.android.debug.arm64.so ci/apk-root/lib/arm64-v8a/
           cp addons/terrain_3d/bin/libterrain.android.release.arm64.so ci/apk-root/lib/arm64-v8a/
           file ci/apk-root/lib/arm64-v8a/libterrain.android.debug.arm64.so
           file ci/apk-root/lib/arm64-v8a/libterrain.android.release.arm64.so
-          (cd ci/apk-root && zip -q -u ../../build/the_last_memory_forest-unsigned.apk lib/arm64-v8a/libterrain.android.debug.arm64.so lib/arm64-v8a/libterrain.android.release.arm64.so)
+          (cd ci/apk-root && zip -q -0 -u ../../"$UNSIGNED" lib/arm64-v8a/libterrain.android.debug.arm64.so lib/arm64-v8a/libterrain.android.release.arm64.so)
 
-          "$ANDROID_HOME/build-tools/34.0.0/apksigner" sign --ks ci/debug.keystore --ks-pass pass:android \
-            --key-pass pass:android --out build/the_last_memory_forest.apk build/the_last_memory_forest-unsigned.apk
-          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose --print-certs build/the_last_memory_forest.apk
-          test -s build/the_last_memory_forest.apk
-          file build/the_last_memory_forest.apk
-          unzip -l build/the_last_memory_forest.apk | grep -q "AndroidManifest.xml"
-          unzip -l build/the_last_memory_forest.apk | grep -q "lib/arm64-v8a/libgodot_android.so"
-          unzip -l build/the_last_memory_forest.apk | grep -q "lib/arm64-v8a/libterrain.android.debug.arm64.so"
-          unzip -l build/the_last_memory_forest.apk | grep -q "lib/arm64-v8a/libterrain.android.release.arm64.so"
-          ls -lh build/the_last_memory_forest.apk
+          # zip -u changes the APK after Godot's own alignment pass. Re-align
+          # the complete archive (including the newly added .so files) before signing.
+          "$GODOT_BIN/zipalign" -P 16 -f -v 4 "$UNSIGNED" "$ALIGNED"
+          "$GODOT_BIN/zipalign" -c -P 16 -v 4 "$ALIGNED"
+
+          # Use the repository's permanent project keystore so future updates
+          # have the same signing certificate instead of a new random key per build.
+          "$GODOT_BIN/apksigner" sign --ks ci/thelastmemory.keystore --ks-pass pass:thelastmemory \
+            --ks-key-alias thelastmemory --key-pass pass:thelastmemory --out "$APK" "$ALIGNED"
+          "$GODOT_BIN/apksigner" verify --verbose --print-certs "$APK"
+          "$GODOT_BIN/zipalign" -c -P 16 -v 4 "$APK"
+
+          # Validate the APK archive and Android manifest/package metadata.
+          unzip -tq "$APK" >/dev/null
+          "$GODOT_BIN/aapt" dump badging "$APK" > build/apk-badging.txt
+          grep -q "package: name='com.novence.thelastmemory'" build/apk-badging.txt
+          unzip -Z1 "$APK" | grep -qx 'AndroidManifest.xml'
+          unzip -Z1 "$APK" | grep -qx 'lib/arm64-v8a/libgodot_android.so'
+          unzip -Z1 "$APK" | grep -qx 'lib/arm64-v8a/libterrain.android.debug.arm64.so'
+          unzip -Z1 "$APK" | grep -qx 'lib/arm64-v8a/libterrain.android.release.arm64.so'
+          test -s "$APK"
+          file "$APK"
+          ls -lh "$APK"
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
