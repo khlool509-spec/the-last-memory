@@ -38,7 +38,7 @@ func _ready() -> void:
 	get_tree().quit(_fail)
 
 func _load_world() -> void:
-	var path := "res://levels/ch01_forest/chapter_one.tscn"
+	var path := "res://archive/legacy_generated_forest/chapter_one_legacy.tscn"
 	if not ResourceLoader.exists(path):
 		_no("مشهد الفصل موجود", path)
 		return

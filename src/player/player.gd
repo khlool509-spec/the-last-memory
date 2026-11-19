@@ -25,7 +25,7 @@ signal fired()
 @export var max_stamina: float = 100.0
 @export var stamina_drain: float = 22.0
 @export var stamina_regen: float = 16.0
-@export var floor_snap_length: float = 0.55
+@export var ground_snap_distance: float = 0.55
 @export var floor_safe_margin: float = 0.035
 
 var move_dir: Vector2 = Vector2.ZERO
@@ -66,6 +66,7 @@ func _ready() -> void:
 	stamina = max_stamina
 	safe_margin = floor_safe_margin
 	floor_max_angle = deg_to_rad(55.0)
+	self.floor_snap_length = maxf(self.floor_snap_length, ground_snap_distance)
 	_grounding_ready = true
 
 func set_move_input(dir: Vector2) -> void:
@@ -230,7 +231,7 @@ func _physics_process(delta: float) -> void:
 		_fire_cd = 0.0
 
 	if _grounding_ready and not in_water and not is_on_floor() and velocity.y <= 0.0:
-		floor_snap_length = maxf(floor_snap_length, 0.55)
+		self.floor_snap_length = maxf(self.floor_snap_length, ground_snap_distance)
 		apply_floor_snap()
 
 	move_and_slide()

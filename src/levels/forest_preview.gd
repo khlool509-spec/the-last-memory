@@ -4,6 +4,38 @@ class_name ForestPreview
 const FOREST_SCENE := "res://world.tscn"
 var forest_root: Node3D
 
+func _ready() -> void:
+	super._ready()
+	call_deferred("_align_player_to_terrain")
+
+func _align_player_to_terrain() -> void:
+	if not is_instance_valid(player):
+		return
+	# Keep physics paused for this one startup placement until Terrain3D's collision is ready.
+	player.set_physics_process(false)
+	await get_tree().physics_frame
+	if not is_instance_valid(player) or not is_inside_tree():
+		return
+	var from := Vector3(player.global_position.x, 256.0, player.global_position.z)
+	var to := Vector3(player.global_position.x, -64.0, player.global_position.z)
+	var query := PhysicsRayQueryParameters3D.create(from, to, 1 << 2)
+	query.exclude = [player.get_rid()]
+	query.collide_with_areas = false
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		push_error("ForestPreview: spawn ray did not hit Terrain3D collision")
+		player.set_physics_process(true)
+		return
+	var ground: Vector3 = hit["position"]
+	player.global_position = Vector3(player.global_position.x, ground.y + 0.08, player.global_position.z)
+	player.velocity = Vector3.ZERO
+	player.set_physics_process(true)
+	SaveSystem.data["player_position"] = [
+		player.global_position.x, player.global_position.y, player.global_position.z
+	]
+	SaveSystem.save_game()
+	print("[ForestPreview] Spawn aligned to Terrain3D at Y=%.2f" % ground.y)
+
 func build_world() -> void:
 	name = "ForestPreview"
 	chapter_index = 1
@@ -47,6 +79,7 @@ func _strip_source_demo_nodes(root: Node) -> void:
 	}
 	for child in root.get_children().duplicate():
 		if remove_names.has(child.name):
+			root.remove_child(child)
 			child.queue_free()
 		else:
 			_strip_source_demo_nodes(child)

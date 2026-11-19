@@ -50,7 +50,7 @@ if [ "$CODE" -eq 0 ]; then
     "res://src/ui/screens/collectibles_menu.tscn" \
     "res://levels/test/playground.tscn" \
     "res://levels/test/test_3d.tscn" \
-    "res://levels/ch01_forest/chapter_one.tscn" ; do
+    "res://archive/legacy_generated_forest/chapter_one_legacy.tscn" ; do
     OUT=$("$GODOT" --headless --path "$ROOT" "$SCENE" --quit-after 90 2>&1)
     RC=$?
     CLEAN=$(echo "$OUT" | grep -vE "$EXIT_NOISE" || true)

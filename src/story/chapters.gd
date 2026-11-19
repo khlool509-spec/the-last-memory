@@ -5,7 +5,7 @@ extends RefCounted
 const DATA := [
 	{"n": 1, "ar": "الغابة المنسية", "en": "The Forgotten Forest",
 	 "desc": "يستيقظ بلا ذاكرة بين أشجار لا نهاية لها.",
-	 "scene": "res://levels/ch01_forest/chapter_one.tscn"},
+	 "scene": "res://levels/ch01_forest/forest_preview.tscn"},
 	{"n": 2, "ar": "بوابة الأسرار", "en": "The Gate of Secrets",
 	 "desc": "بوابة أثرية وكتاب ألغاز لا يُفتح بالمفاتيح."},
 	{"n": 3, "ar": "البيت الصامت", "en": "The Silent House",

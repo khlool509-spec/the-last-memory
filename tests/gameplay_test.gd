@@ -152,10 +152,10 @@ func _test_chapter_unlock() -> void:
 	_true("الأرقام أعداد صحيحة بعد JSON", all_int, str(arr))
 	_eq("الأعلى بعد التحميل = 2", SaveSystem.highest_unlocked(), 2)
 	_true("الفصل 3 ما زال مقفلاً", not SaveSystem.is_chapter_unlocked(3))
-	_eq("مسار الفصل 1 مبني", Chapters.scene_path(1), "res://levels/ch01_forest/chapter_one.tscn")
+	_eq("مسار الفصل 1 مبني", Chapters.scene_path(1), "res://levels/ch01_forest/forest_preview.tscn")
 	_true("الفصل 1 قابل للعب", Chapters.is_playable(1))
 	_true("الفصل 3 ليس مبنياً بعد", not Chapters.is_playable(3))
-	_eq("أول فصل مبني", Chapters.first_playable(), "res://levels/ch01_forest/chapter_one.tscn")
+	_eq("أول فصل مبني", Chapters.first_playable(), "res://levels/ch01_forest/forest_preview.tscn")
 
 # ---------- الصوت ----------
 ## كل الأصوات مولَّدة داخل المشروع. الاختبار يتحقق من وجودها وتحميلها
@@ -464,7 +464,7 @@ func _test_door() -> void:
 # ---------- الفصل الأول ----------
 func _test_chapter_one() -> void:
 	print("\n[الفصل الأول: الغابة المنسية]")
-	var path := "res://levels/ch01_forest/chapter_one.tscn"
+	var path := "res://archive/legacy_generated_forest/chapter_one_legacy.tscn"
 	if not ResourceLoader.exists(path):
 		_no("مشهد الفصل موجود", path)
 		return

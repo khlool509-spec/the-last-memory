@@ -4,12 +4,23 @@ on:
   push:
     branches:
       - integration/forest-godot4
+      - work/forest-spawn-modmenu-final
     paths:
       - ".github/workflows/forest-preview-android.yml"
       - "FOREST_PREVIEW.md"
       - "src/levels/forest_preview.gd"
       - "levels/ch01_forest/forest_preview.tscn"
       - "project.godot"
+      - "src/levels/game_level.gd"
+      - "src/player/player.gd"
+      - "src/story/chapters.gd"
+      - "tests/gameplay_test.gd"
+      - "tests/world_test.gd"
+      - "tests/run.sh"
+      - "tests/forest_preview_test.gd"
+      - "tests/forest_preview_test.tscn"
+      - "archive/legacy_generated_forest/**"
+      - "levels/ch01_forest/chapter_one.tscn"
   workflow_dispatch:
 
 permissions:
@@ -27,7 +38,7 @@ jobs:
       - name: Checkout integration branch
         uses: actions/checkout@v4
         with:
-          ref: integration/forest-godot4
+          ref: ${{ github.ref_name }}
 
       - name: Download Forest-Godot4 source
         run: |
@@ -224,6 +235,11 @@ jobs:
           godot --headless --editor --path . --import
           godot --headless --path . --quit-after 20 --rendering-method mobile
 
+      - name: Verify Terrain3D spawn, collision, and touch controls
+        run: |
+          set -e
+          godot --headless --path . res://tests/forest_preview_test.tscn
+
       - name: Create Android debug.keystore and signing config
         run: |
           set -e
@@ -272,9 +288,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          TAG="forest-integration-latest"
+          TAG="forest-spawn-fix-latest"
           gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
           gh release create "$TAG" build/the_last_memory_forest.apk \
-            --title "THE LAST MEMORY - Forest Integration" \
+            --title "THE LAST MEMORY - Terrain3D Spawn Fix" \
             --notes "Playable Android preview: authored Forest-Godot4 terrain/foliage with THE LAST MEMORY mobile player and HUD. Integration branch only." \
             --latest=false

@@ -47,6 +47,9 @@ func place_contents() -> void:
 func _build_player() -> void:
 	player = Player.new()
 	player.name = "Player"
+	# Terrain3D uses physics layer 3 (bit 4); retain layer 1 for regular bodies.
+	player.collision_layer = 1
+	player.collision_mask = 1 | (1 << 2)
 	player.position = spawn_point
 	player.rotation.y = deg_to_rad(spawn_yaw_deg)
 
