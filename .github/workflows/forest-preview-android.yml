@@ -212,6 +212,9 @@ jobs:
           command_line/extra_args=""
           permissions/custom_permissions=PackedStringArray()
           EOF
+          VERSION_CODE=$((100000 + GITHUB_RUN_NUMBER))
+          sed -i "s|^version/code=.*|version/code=${VERSION_CODE}|" export_presets.cfg
+          echo "Android versionCode=${VERSION_CODE}"
 
       - name: Verify Terrain3D Android ARM64 native library
         run: |
