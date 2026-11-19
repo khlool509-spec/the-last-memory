@@ -47,12 +47,8 @@ jobs:
           mkdir -p addons
           cp -a forest_preview/addons/. addons/
 
-          # Fix Windows-only OBJ material paths using textures that actually ship in the source repo.
-          python3 - <<'PY'
-          from pathlib import Path
-          import os
-
-          root = Path(".")
+          # Repair exported OBJ material libraries that still point to the author's Windows drive.
+          # All replacement textures below are present in Forest-Godot4.
           mappings = {
               "C:/Users/Admin/Documents/terrain/terrain mat/ground text/rock text/Rocks007_1K-JPG_Color.jpg":
                   Path("terrain mat/ground text/rock text/Rocks007_1K-JPG_Color.jpg"),
@@ -68,16 +64,46 @@ jobs:
                   Path("env models/rocks/texture/rock 2 roughness.jpg"),
               "D:/assets/extracted/rocks/rock 2/textures/COLOR.tga.png":
                   Path("env models/rocks/texture/rock 2 base.jpg"),
+              "D:/assets/extracted/MAPLE/source/acer_roughness.png":
+                  Path("env models/plants/tree/textures/maple_bark_roughness.jpg"),
+              "D:/assets/extracted/MAPLE/source/acer_normal.png":
+                  Path("env models/plants/tree/textures/maple_bark_normal.jpg"),
+              "D:/assets/extracted/pine/textures/Bark_basecolor.png":
+                  Path("env models/plants/tree/textures/pine_bark_base.jpg"),
+              "D:/assets/extracted/pine/source/Substance_graph_roughness.png":
+                  Path("env models/plants/tree/textures/pine_bark_roughness.jpg"),
+              "D:/assets/extracted/pine/source/Substance_graph_normal.png":
+                  Path("env models/plants/tree/textures/pine_bark_normal.jpg"),
+              "D:/assets/extracted/pine/textures/Pine_large_3_Billboard_SS.png":
+                  Path("env models/plants/tree/textures/pine_leaf_ao.jpg"),
+              "D:/assets/extracted/liliac/source/Lilac_bark_roughness_2k.png":
+                  Path("env models/plants/bush/textures/Lilac_bark_roughness.jpg"),
+              "D:/assets/extracted/liliac/source/Lilac_bark_normal_2k.png":
+                  Path("env models/plants/bush/textures/Lilac_bark_normal.jpg"),
+              "D:/assets/extracted/liliac/source/Textures cards/lilac_cards_Roughness.png":
+                  Path("env models/plants/bush/textures/lilac_cards_roughness.jpg"),
+              "D:/assets/extracted/liliac/source/Textures cards/lilac_cards_Normal.png":
+                  Path("env models/plants/bush/textures/lilac_cards_normal.jpg"),
+              "C:/Roughness.png":
+                  Path("env models/plants/grass/textures/fern_roughness.jpg"),
+              "C:/Normal.png":
+                  Path("env models/plants/grass/textures/fern_normal.jpg"),
           }
 
-          for mtl in Path("env models/rocks").rglob("*.mtl"):
-              data = mtl.read_text(encoding="utf-8", errors="replace")
-              for old, target in mappings.items():
-                  if old in data:
-                      if not target.is_file():
-                          raise SystemExit(f"Replacement texture is missing: {target}")
-                      data = data.replace(old, os.path.relpath(target, mtl.parent))
-              mtl.write_text(data, encoding="utf-8")
+          # Resolve only files that exist in the checked-out source. Unsupported
+          # external opacity maps are dropped rather than left as broken paths.
+          for mtl in Path("env models").rglob("*.mtl"):
+              rewritten = []
+              for line in mtl.read_text(encoding="utf-8", errors="replace").splitlines():
+                  if line.lstrip().startswith("map_d ") and ("D:/" in line or "C:/" in line):
+                      continue
+                  for old, target in mappings.items():
+                      if old in line:
+                          if not target.is_file():
+                              raise SystemExit(f"Replacement texture is missing: {target}")
+                          line = line.replace(old, os.path.relpath(target, mtl.parent))
+                  rewritten.append(line)
+              mtl.write_text("\\n".join(rewritten) + "\\n", encoding="utf-8")
 
           for folder in [Path("env models"), Path("terrain mat"), Path("addons")]:
               for path in folder.rglob("*"):
