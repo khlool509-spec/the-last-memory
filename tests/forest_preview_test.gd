@@ -40,13 +40,8 @@ func _ready() -> void:
 		follow_camera != null and follow_camera.current)
 
 	var has_sun := false
-	var stack: Array[Node] = [level.forest_root] if level.forest_root != null else []
-	while not stack.is_empty():
-		var node: Node = stack.pop_back()
-		if node is DirectionalLight3D:
-			has_sun = true
-		for child in node.get_children():
-			stack.append(child)
+	if level.forest_root != null:
+		has_sun = not level.forest_root.find_children("*", "DirectionalLight3D", true, false).is_empty()
 	_check("authored forest has directional sunlight", has_sun)
 
 	if level.player:
