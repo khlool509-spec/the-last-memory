@@ -12,6 +12,7 @@ config/name="THE LAST MEMORY"
 config/description="لعبة مغامرات وغموض ثلاثية الأبعاد بمنظور الشخص الثالث، للأندرويد، فردية وتعمل دون اتصال."
 config/version="0.13.0"
 run/main_scene="res://levels/ch01_forest/forest_preview.tscn"
+run/max_fps=60
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://assets/textures/icon/icon_512.png"
 
