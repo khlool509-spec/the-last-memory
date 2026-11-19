@@ -39,8 +39,8 @@ func _ready() -> void:
 	_check("third-person camera exists and is current",
 		follow_camera != null and follow_camera.current)
 
-	var sun := level.forest_root.get_node_or_null("Sky3D/SunLight") as DirectionalLight3D if level.forest_root != null else null
-	_check("authored forest has directional sunlight", sun != null)
+	var sun_nodes := level.forest_root.find_children("*", "DirectionalLight3D", true, false) if level.forest_root != null else []
+	_check("authored forest has directional sunlight", not sun_nodes.is_empty())
 
 	if level.player:
 		_check("player collision mask includes Terrain3D",
