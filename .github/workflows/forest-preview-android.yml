@@ -252,7 +252,7 @@ jobs:
           APK="build/the_last_memory_forest.apk"
           UNSIGNED="build/the_last_memory_forest-unsigned.apk"
           ALIGNED="build/the_last_memory_forest-aligned.apk"
-          GODOT_BIN="$ANDROID_HOME/build-tools/35.0.0"
+          GODOT_BIN="$ANDROID_HOME/build-tools/34.0.0"
           godot --headless --verbose --path . --export-debug "Android" "$UNSIGNED"
           test -s "$UNSIGNED"
 
@@ -265,15 +265,15 @@ jobs:
 
           # zip -u changes the APK after Godot's own alignment pass. Re-align
           # the complete archive (including the newly added .so files) before signing.
-          "$GODOT_BIN/zipalign" -P 16 -f -v 4 "$UNSIGNED" "$ALIGNED"
-          "$GODOT_BIN/zipalign" -c -P 16 -v 4 "$ALIGNED"
+          "$GODOT_BIN/zipalign" -f -v 4 "$UNSIGNED" "$ALIGNED"
+          "$GODOT_BIN/zipalign" -c -v 4 "$ALIGNED"
 
           # Use the repository's permanent project keystore so future updates
           # have the same signing certificate instead of a new random key per build.
           "$GODOT_BIN/apksigner" sign --ks ci/thelastmemory.keystore --ks-pass pass:thelastmemory \
             --ks-key-alias thelastmemory --key-pass pass:thelastmemory --out "$APK" "$ALIGNED"
           "$GODOT_BIN/apksigner" verify --verbose --print-certs "$APK"
-          "$GODOT_BIN/zipalign" -c -P 16 -v 4 "$APK"
+          "$GODOT_BIN/zipalign" -c -v 4 "$APK"
 
           # Validate the APK archive and Android manifest/package metadata.
           unzip -tq "$APK" >/dev/null
