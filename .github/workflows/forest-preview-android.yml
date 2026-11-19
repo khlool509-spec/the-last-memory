@@ -114,7 +114,7 @@ jobs:
               for path in folder.rglob("*"):
                   if path.is_file() and path.suffix.lower() in {".mtl", ".tscn", ".tres", ".gd", ".cfg", ".gdshader", ".gdshaderinc"}:
                       data = path.read_text(encoding="utf-8", errors="ignore")
-                      if re.search(r"[A-Za-z]:[/\\\\]", data):
+                      if re.search(r"(?<![A-Za-z0-9_])[A-Za-z]:[/\\]", data):
                           raise SystemExit(f"Unresolved Windows asset path in {path}")
           PY
 
