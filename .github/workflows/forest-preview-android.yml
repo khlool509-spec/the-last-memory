@@ -135,7 +135,9 @@ jobs:
         run: |
           set -e
           mkdir -p build
-          godot --headless --path forest_preview --export-debug "Android" build/forest_preview.apk
+          echo "--- Android export preset ---"
+          sed -n '/^\[preset.0\]/,/^\[preset.1\]/p' forest_preview/export_presets.cfg
+          godot --headless --verbose --path forest_preview --export-debug "Android" build/forest_preview.apk
           test -s build/forest_preview.apk
           file build/forest_preview.apk
           unzip -l build/forest_preview.apk | grep -q "AndroidManifest.xml"
