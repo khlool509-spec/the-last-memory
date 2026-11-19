@@ -43,6 +43,7 @@ var camera_basis_yaw: float = 0.0
 var stamina: float = 100.0
 
 var _gravity: float = 9.8
+var _grounding_ready := false
 var _was_on_floor: bool = true
 var rig: CharacterRig = null          # الشخصية المفصليّة، تُركَّب من المرحلة
 var model: CharacterModel = null      # مجسّم مرخّص مجهّز، إن وُجد
@@ -58,6 +59,7 @@ const STEP_RUN := 2.6
 func _ready() -> void:
 	_gravity = float(ProjectSettings.get_setting("physics/3d/default_gravity", 9.8))
 	stamina = max_stamina
+	_grounding_ready = true
 
 func set_move_input(dir: Vector2) -> void:
 	move_dir = dir if dir.length() <= 1.0 else dir.normalized()
