@@ -17,6 +17,7 @@ on:
       - "tests/gameplay_test.gd"
       - "tests/world_test.gd"
       - "tests/run.sh"
+      - "tests/test_runner.gd"
       - "tests/forest_preview_test.gd"
       - "tests/forest_preview_test.tscn"
       - "archive/legacy_generated_forest/**"
@@ -38,7 +39,7 @@ jobs:
       - name: Checkout integration branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref_name }}
+          ref: ${{ github.sha }}
 
       - name: Download Forest-Godot4 source
         run: |
