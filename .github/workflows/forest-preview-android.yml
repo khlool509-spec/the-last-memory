@@ -277,8 +277,10 @@ jobs:
 
           # Validate the APK archive and Android manifest/package metadata.
           unzip -tq "$APK" >/dev/null
-          "$GODOT_BIN/aapt" dump badging "$APK" > build/apk-badging.txt
+          "$GODOT_BIN/aapt2" dump badging "$APK" > build/apk-badging.txt
           grep -q "package: name='com.novence.thelastmemory'" build/apk-badging.txt
+          "$GODOT_BIN/aapt2" dump xmltree "$APK" --file AndroidManifest.xml > build/apk-manifest.txt
+          grep -q 'E: manifest' build/apk-manifest.txt
           unzip -Z1 "$APK" > build/apk-file-list.txt
           grep -qx 'AndroidManifest.xml' build/apk-file-list.txt
           grep -qx 'lib/arm64-v8a/libgodot_android.so' build/apk-file-list.txt
