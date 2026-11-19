@@ -15,6 +15,7 @@ var pause_menu: PauseMenu
 var interactor: Interactor
 var inventory_ui: InventoryPanel
 var note_reader: NoteReader
+var mod_menu: ModMenu
 
 func _ready() -> void:
 	build_world()
@@ -129,6 +130,11 @@ func _build_ui() -> void:
 	pause_menu = PauseMenu.new()
 	pause_menu.name = "PauseMenu"
 	add_child(pause_menu)
+
+	mod_menu = ModMenu.new()
+	mod_menu.name = "ModMenu"
+	add_child(mod_menu)
+	mod_menu.setup(player)
 
 # ---------- التوصيل ----------
 func _wire() -> void:
