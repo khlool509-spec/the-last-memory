@@ -142,6 +142,15 @@ func _test_main_scene() -> void:
 		return
 	_ok("المشهد الرئيسي يُحمَّل ويُنشَأ")
 
+	# ForestPreview يبني كاميرا اللاعب وإضاءة الغابة في _ready، لا داخل ملف TSCN.
+	# لذلك لا يمكن فحص هذين الموردين من instantiate منفرد؛ اختبار الغابة الحي
+	# يضيف المشهد إلى شجرة التشغيل ويتحقق منهما فعلياً.
+	var main_script := root.get_script() as Script
+	if main_script != null and main_script.resource_path.ends_with("/forest_preview.gd"):
+		_ok("مشهد الغابة ديناميكي — فحص الكاميرا والإضاءة في اختبار التشغيل")
+		root.free()
+		return
+
 	# شروط الكاميرا والإضاءة تخص المشاهد الثلاثية فقط.
 	# شاشة واجهة (Control) لا تحتاج أياً منهما، فلا نفرضها عليها.
 	var has_cam := false
