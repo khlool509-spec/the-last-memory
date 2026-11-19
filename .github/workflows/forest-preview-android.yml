@@ -38,6 +38,7 @@ jobs:
         run: |
           set -e
           # Copy the complete authored world dependencies, not only its visible meshes.
+          rm -rf ./world.tscn "./env models" "./terrain mat" ./terrain_Data ./character "./\$lib"
           cp -a forest_preview/world.tscn ./world.tscn
           cp -a "forest_preview/env models" "./env models"
           cp -a "forest_preview/terrain mat" "./terrain mat"
@@ -233,7 +234,7 @@ jobs:
           cp ci/debug.keystore "$HOME/.android/debug.keystore"
           chmod 600 ci/debug.keystore
 
-      - name: Export, package Terrain3D ARM64, and sign Android APK
+      - name: Export, package Terrain3D ARM64 debug+release, and sign Android APK
         run: |
           set -e
           mkdir -p build ci/apk-root/lib/arm64-v8a
@@ -244,8 +245,10 @@ jobs:
           # project's standalone Terrain3D GDExtension in lib/<abi>; add the
           # exact debug binary selected by --export-debug before signing.
           cp addons/terrain_3d/bin/libterrain.android.debug.arm64.so ci/apk-root/lib/arm64-v8a/
+          cp addons/terrain_3d/bin/libterrain.android.release.arm64.so ci/apk-root/lib/arm64-v8a/
           file ci/apk-root/lib/arm64-v8a/libterrain.android.debug.arm64.so
-          (cd ci/apk-root && zip -q -u ../../build/the_last_memory_forest-unsigned.apk lib/arm64-v8a/libterrain.android.debug.arm64.so)
+          file ci/apk-root/lib/arm64-v8a/libterrain.android.release.arm64.so
+          (cd ci/apk-root && zip -q -u ../../build/the_last_memory_forest-unsigned.apk lib/arm64-v8a/libterrain.android.debug.arm64.so lib/arm64-v8a/libterrain.android.release.arm64.so)
 
           "$ANDROID_HOME/build-tools/34.0.0/apksigner" sign --ks ci/debug.keystore --ks-pass pass:android \
             --key-pass pass:android --out build/the_last_memory_forest.apk build/the_last_memory_forest-unsigned.apk
@@ -255,6 +258,7 @@ jobs:
           unzip -l build/the_last_memory_forest.apk | grep -q "AndroidManifest.xml"
           unzip -l build/the_last_memory_forest.apk | grep -q "lib/arm64-v8a/libgodot_android.so"
           unzip -l build/the_last_memory_forest.apk | grep -q "lib/arm64-v8a/libterrain.android.debug.arm64.so"
+          unzip -l build/the_last_memory_forest.apk | grep -q "lib/arm64-v8a/libterrain.android.release.arm64.so"
           ls -lh build/the_last_memory_forest.apk
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
