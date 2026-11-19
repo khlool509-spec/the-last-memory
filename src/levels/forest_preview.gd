@@ -11,7 +11,7 @@ func build_world() -> void:
 
 	if not ResourceLoader.exists(FOREST_SCENE):
 		push_error("Forest scene missing: " + FOREST_SCENE)
-		spawn_point = Vector3(0, 2, 0)
+		spawn_point = Vector3(0, 6.0, 0)
 		return
 
 	var packed := load(FOREST_SCENE) as PackedScene
@@ -25,7 +25,7 @@ func build_world() -> void:
 
 	# Source forest's original player starts around this location.
 	# Keep the same area so the authored terrain is already underneath us.
-	spawn_point = Vector3(116.5, 14.6, 97.25)
+	spawn_point = Vector3(116.5, 18.0, 97.25)
 	spawn_yaw_deg = 150.0
 
 	# Keep the old generated world only as gameplay-data logic; it must not
