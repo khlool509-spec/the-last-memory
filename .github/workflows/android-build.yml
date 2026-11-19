@@ -9,7 +9,7 @@ name: Android Build
 on:
   workflow_dispatch:
   push:
-    branches: [main, work/forest-spawn-modmenu-final] # يبني فرع النسخة النهائية أيضاً
+    branches: [main] # فرع دمج الغابة يُبنى عبر forest-preview-android.yml
     tags: ['v*']
 
 env:
