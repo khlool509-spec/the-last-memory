@@ -32,6 +32,9 @@ func build_world() -> void:
 	# become a second visible/collidable ground under the new terrain.
 	_disable_legacy_world_collision()
 
+	# Invisible oversized floor catches accidental falls through terrain gaps.
+	_create_ground_safety_zone()
+
 func place_contents() -> void:
 	# Preview intentionally keeps the authored forest clean:
 	# player + mobile HUD + real terrain/foliage are the visible result.
@@ -60,3 +63,21 @@ func _disable_collisions_recursive(node: Node) -> void:
 		node.set_collision_mask(0)
 	for child in node.get_children():
 		_disable_collisions_recursive(child)
+
+func _create_ground_safety_zone() -> void:
+	if get_node_or_null("GroundSafetyZone") != null:
+		return
+
+	var body := StaticBody3D.new()
+	body.name = "GroundSafetyZone"
+	body.collision_layer = 1
+	body.collision_mask = 1
+
+	var shape := CollisionShape3D.new()
+	shape.name = "SafetyFloorCollision"
+	var box := BoxShape3D.new()
+	box.size = Vector3(1024.0, 2.0, 1024.0)
+	shape.shape = box
+	shape.position.y = -8.0
+	body.add_child(shape)
+	add_child(body)
