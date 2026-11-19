@@ -63,6 +63,7 @@ var _cache: Dictionary = {}
 var _rng := RandomNumberGenerator.new()
 var _current_music := ""
 var _current_ambient := ""
+var _music_tween: Tween
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -177,18 +178,22 @@ func _stream(path: String, looped: bool) -> AudioStream:
 		return null
 	var s: AudioStream = ResourceLoader.load(path)
 	if s is AudioStreamWAV and looped:
-		# نسخة مستقلة: تعديل المورد المخزَّن بمساره يُبقيه حياً بعد الإغلاق
+		# نسخة مستقلة: لا نعدّل المورد الأصلي المخزّن في الاستيراد
 		var w := (s as AudioStreamWAV).duplicate(true) as AudioStreamWAV
 		w.take_over_path("")
 		w.loop_mode = AudioStreamWAV.LOOP_FORWARD
 		w.loop_begin = 0
-		# نهاية الحلقة = عدد الإطارات الحقيقي، محسوباً من الطول ومعدّل
-		# المزج. لا من حجم البايتات: Godot يستورد هذه الملفات بصيغة
-		# QOA المضغوطة حيث البايت ليس إطاراً. ولا صفراً: صفر في
-		# AudioStreamWAV يعني حلقة بطول صفر فيتوقّف التشغيل، لا
-		# «إلى النهاية» كما قد يُظنّ. كلا الخطأين أسكت الموسيقى.
+		# نهاية الحلقة = عدد الإطارات الحقيقي، لا حجم ملف QOA بالبايت.
 		w.loop_end = int(w.get_length() * float(w.mix_rate))
 		s = w
+	elif s is AudioStreamMP3 and looped:
+		# MP3 لا يستخدم loop_mode الخاص بـ WAV؛ له خاصية loop مستقلة.
+		# من دونها تنتهي موسيقى القائمة عند نهاية المقطع بدلاً من الاستمرار.
+		var mp3 := (s as AudioStreamMP3).duplicate(true) as AudioStreamMP3
+		mp3.take_over_path("")
+		mp3.loop = true
+		mp3.loop_offset = 0.0
+		s = mp3
 	_cache[path] = s
 	return s
 
@@ -227,18 +232,23 @@ func play_music(key: String) -> void:
 	# الإعدادات يضرب فوق هذا المستوى لا يستبدله.
 	_music.volume_db = -60.0
 	_music.play()
-	var tw := create_tween()
-	tw.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_SINE)
-	tw.tween_property(_music, "volume_db", MUSIC_BED_DB, MENU_FADE_IN_SEC)
+	if _music_tween and _music_tween.is_running():
+		_music_tween.kill()
+	_music_tween = create_tween()
+	_music_tween.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_SINE)
+	_music_tween.tween_property(_music, "volume_db", MUSIC_BED_DB, MENU_FADE_IN_SEC)
 
 ## توقّف بتلاشٍ: القطع المفاجئ يُسمع كخلل لا كانتقال
 func stop_music() -> void:
 	if _current_music == "":
 		return
 	_current_music = ""
-	var tw := create_tween()
-	tw.tween_property(_music, "volume_db", -60.0, MENU_FADE_OUT_SEC)
-	tw.tween_callback(_music.stop)
+	if _music_tween and _music_tween.is_running():
+		_music_tween.kill()
+	_music_tween = create_tween()
+	_music_tween.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_SINE)
+	_music_tween.tween_property(_music, "volume_db", -60.0, MENU_FADE_OUT_SEC)
+	_music_tween.tween_callback(_music.stop)
 
 func play_ambient(key: String) -> void:
 	var path := str(AMBIENT.get(key, ""))
@@ -259,5 +269,8 @@ func stop_ambient() -> void:
 ## كذيل عالق من المشهد السابق لا كانتقال ناعم.
 func stop_all() -> void:
 	_current_music = ""
+	if _music_tween and _music_tween.is_running():
+		_music_tween.kill()
+	_music_tween = null
 	_music.stop()
 	stop_ambient()
