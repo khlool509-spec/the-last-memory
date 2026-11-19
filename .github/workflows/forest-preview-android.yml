@@ -148,7 +148,7 @@ jobs:
           SDKMGR=$(find "$SDK/cmdline-tools" -name sdkmanager -type f | sort | tail -1)
           test -n "$SDKMGR"
           yes | "$SDKMGR" --licenses >/dev/null 2>&1 || true
-          "$SDKMGR" "platform-tools" "build-tools;34.0.0" "platforms;android-34"
+          "$SDKMGR" "platform-tools" "build-tools;36.0.0" "platforms;android-35"
           echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
           echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
 
@@ -199,7 +199,9 @@ jobs:
           architectures/x86=false
           architectures/x86_64=false
           version/code=16
-          version/name="0.15.0-forest-install-fix"
+          version/name="0.15.1-forest-release-install-fix"
+          gradle_build/min_sdk="24"
+          gradle_build/target_sdk="35"
           package/unique_name="com.novence.thelastmemory"
           package/name="THE LAST MEMORY"
           package/signed=false
@@ -255,43 +257,49 @@ jobs:
           APK="build/the_last_memory_forest.apk"
           UNSIGNED="build/the_last_memory_forest-unsigned.apk"
           ALIGNED="build/the_last_memory_forest-aligned.apk"
-          GODOT_BIN="$ANDROID_HOME/build-tools/34.0.0"
-          godot --headless --verbose --path . --export-debug "Android" "$UNSIGNED"
+          GODOT_BIN="$ANDROID_HOME/build-tools/36.0.0"
+          # Export the optimized release template; do not ship a debug export.
+          godot --headless --verbose --path . --export-release "Android" "$UNSIGNED"
           test -s "$UNSIGNED"
 
           # Add the Terrain3D runtime libraries before final APK alignment.
-          cp addons/terrain_3d/bin/libterrain.android.debug.arm64.so ci/apk-root/lib/arm64-v8a/
+          # Release export resolves the release GDExtension binary only.
           cp addons/terrain_3d/bin/libterrain.android.release.arm64.so ci/apk-root/lib/arm64-v8a/
-          file ci/apk-root/lib/arm64-v8a/libterrain.android.debug.arm64.so
           file ci/apk-root/lib/arm64-v8a/libterrain.android.release.arm64.so
-          (cd ci/apk-root && zip -q -0 -u ../../"$UNSIGNED" lib/arm64-v8a/libterrain.android.debug.arm64.so lib/arm64-v8a/libterrain.android.release.arm64.so)
+          (cd ci/apk-root && zip -q -0 -u ../../"$UNSIGNED" lib/arm64-v8a/libterrain.android.release.arm64.so)
 
           # zip -u changes the APK after Godot's own alignment pass. Re-align
           # the complete archive (including the newly added .so files) before signing.
-          "$GODOT_BIN/zipalign" -p -f -v 4 "$UNSIGNED" "$ALIGNED"
-          "$GODOT_BIN/zipalign" -c -p -v 4 "$ALIGNED"
+          # Align uncompressed native libraries on 16 KB boundaries for modern Android devices.
+          "$GODOT_BIN/zipalign" -P 16 -f -v 4 "$UNSIGNED" "$ALIGNED"
+          "$GODOT_BIN/zipalign" -c -P 16 -v 4 "$ALIGNED"
 
           # Use the repository's permanent project keystore so future updates
           # have the same signing certificate instead of a new random key per build.
-          "$GODOT_BIN/apksigner" sign --ks ci/thelastmemory.keystore --ks-pass pass:thelastmemory \
+          "$GODOT_BIN/apksigner" sign --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true \
+            --ks ci/thelastmemory.keystore --ks-pass pass:thelastmemory \
             --ks-key-alias thelastmemory --key-pass pass:thelastmemory --out "$APK" "$ALIGNED"
           "$GODOT_BIN/apksigner" verify --verbose --print-certs "$APK"
-          "$GODOT_BIN/zipalign" -c -p -v 4 "$APK"
+          "$GODOT_BIN/zipalign" -c -P 16 -v 4 "$APK"
 
           # Validate the APK archive and Android manifest/package metadata.
           unzip -tq "$APK" >/dev/null
           "$GODOT_BIN/aapt2" dump badging "$APK" > build/apk-badging.txt
+          cat build/apk-badging.txt
           grep -q "package: name='com.novence.thelastmemory'" build/apk-badging.txt
+          grep -q "^sdkVersion:'24'" build/apk-badging.txt
+          grep -q "^targetSdkVersion:'35'" build/apk-badging.txt
           "$GODOT_BIN/aapt2" dump xmltree "$APK" --file AndroidManifest.xml > build/apk-manifest.txt
           grep -q 'E: manifest' build/apk-manifest.txt
           unzip -Z1 "$APK" > build/apk-file-list.txt
           grep -qx 'AndroidManifest.xml' build/apk-file-list.txt
           grep -qx 'lib/arm64-v8a/libgodot_android.so' build/apk-file-list.txt
-          grep -qx 'lib/arm64-v8a/libterrain.android.debug.arm64.so' build/apk-file-list.txt
+          ! grep -qx 'lib/arm64-v8a/libterrain.android.debug.arm64.so' build/apk-file-list.txt
           grep -qx 'lib/arm64-v8a/libterrain.android.release.arm64.so' build/apk-file-list.txt
           test -s "$APK"
           file "$APK"
           ls -lh "$APK"
+          sha256sum "$APK"
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
