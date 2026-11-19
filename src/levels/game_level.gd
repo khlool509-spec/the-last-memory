@@ -24,11 +24,8 @@ func _ready() -> void:
 	_build_ui()
 	_wire()
 	place_contents()
-	# الموسيقى أثناء اللعب اختيارية: الافتراضي صمت ليُسمع العالم
-	if bool(Settings.get_value("audio_music_in_game")):
-		Audio.play_music("menu")
-	else:
-		Audio.stop_music()
+	# موسيقى القائمة منفصلة عن اللعب: لا يعاد استخدام مسار القائمة داخل العالم.
+	Audio.stop_music()
 	if ambient_key != "":
 		Audio.play_ambient(ambient_key)
 	Goals.start_chapter(chapter_index)
@@ -157,7 +154,6 @@ func _wire() -> void:
 	hud.reload_pressed.connect(func() -> void: hud.toast("تعبئة", "⟳", Palette.DUST))
 	hud.autorun_toggled.connect(func(v: bool) -> void: player.set_auto_run(v))
 	hud.swim_vertical.connect(func(d: int) -> void: player.set_swim_vertical(d))
-	hud.weapon_selected.connect(func(_i: int) -> void: pass)
 	# دخول الماء يُظهر أزرار السباحة والغوص ويخفيها عند الخروج
 	player.swim_changed.connect(func(v: bool) -> void: hud.set_swimming(v))
 	player.stance_changed.connect(func(_st: String) -> void: pass)
