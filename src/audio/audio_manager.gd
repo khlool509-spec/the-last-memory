@@ -9,9 +9,11 @@ extends Node
 ## ‎-26‎ كانت تعطي ‎-31‎ وهي تحت عتبة السمع على سمّاعة جوال مع ضجيج
 ## الغرفة. ‎-14‎ تعطي ‎-19‎: خلفية تُحسّ ولا تنافس الواجهة.
 const MUSIC_BED_DB := -14.0
+const MENU_FADE_IN_SEC := 2.5
+const MENU_FADE_OUT_SEC := 2.5
 
 const MUSIC := {
-	"menu": "res://assets/audio/music/menu_drone.wav",
+	"menu": "res://assets/audio/music/beneath_the_withered_bough.mp3",
 }
 const AMBIENT := {
 	"forest": "res://assets/audio/ambient/forest_night.wav",
@@ -227,7 +229,7 @@ func play_music(key: String) -> void:
 	_music.play()
 	var tw := create_tween()
 	tw.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_SINE)
-	tw.tween_property(_music, "volume_db", MUSIC_BED_DB, 2.0)
+	tw.tween_property(_music, "volume_db", MUSIC_BED_DB, MENU_FADE_IN_SEC)
 
 ## توقّف بتلاشٍ: القطع المفاجئ يُسمع كخلل لا كانتقال
 func stop_music() -> void:
@@ -235,7 +237,7 @@ func stop_music() -> void:
 		return
 	_current_music = ""
 	var tw := create_tween()
-	tw.tween_property(_music, "volume_db", -60.0, 0.6)
+	tw.tween_property(_music, "volume_db", -60.0, MENU_FADE_OUT_SEC)
 	tw.tween_callback(_music.stop)
 
 func play_ambient(key: String) -> void:
