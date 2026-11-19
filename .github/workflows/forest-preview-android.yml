@@ -66,12 +66,12 @@ jobs:
           from pathlib import Path
           project = Path("project.godot")
           data = project.read_text(encoding="utf-8")
-          marker = "[autoload]\\n"
+          marker = "[autoload]\n"
           entry = 'PhantomCameraManager="*res://addons/phantom_camera/scripts/managers/phantom_camera_manager.gd"'
           if marker not in data:
               raise SystemExit("project.godot has no [autoload] section")
           if entry not in data:
-              data = data.replace(marker, marker + entry + "\\n", 1)
+              data = data.replace(marker, marker + entry + "\n", 1)
           project.write_text(data, encoding="utf-8")
           if entry not in project.read_text(encoding="utf-8"):
               raise SystemExit("PhantomCameraManager autoload was not registered")
