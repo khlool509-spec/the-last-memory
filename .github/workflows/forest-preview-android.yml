@@ -34,24 +34,64 @@ jobs:
           set -e
           git clone --depth 1 https://github.com/Lakshman-YT/Forest-Godot4.git forest_preview
 
-      - name: Bring authored forest into THE LAST MEMORY
+      - name: Bring authored forest and all required dependencies into THE LAST MEMORY
         run: |
           set -e
-          # Preserve the forest project's res:// paths so world.tscn remains intact.
+          # Copy the complete authored world dependencies, not only its visible meshes.
           cp -a forest_preview/world.tscn ./world.tscn
           cp -a "forest_preview/env models" "./env models"
           cp -a "forest_preview/terrain mat" "./terrain mat"
+          cp -a forest_preview/terrain_Data ./terrain_Data
+          cp -a forest_preview/character ./character
+          cp -a "forest_preview/\$lib" "./\$lib"
           mkdir -p addons
-          cp -a forest_preview/addons/sky_3d addons/
-          cp -a forest_preview/addons/terrain_3d addons/
-          # The source project contains a demo player/UI; our preview script removes
-          # those nodes at runtime and uses THE LAST MEMORY's mobile Player + HUD.
-          find "env models" "terrain mat" addons/sky_3d addons/terrain_3d -type f \
-            \( -name "*.tscn" -o -name "*.tres" -o -name "*.gd" -o -name "*.cfg" \) \
-            -print0 | xargs -0 grep -Il "D:/" 2>/dev/null | while read -r f; do
-              sed -i 's|D:/assets/|res://|g; s|D:\\\\assets\\\\|res://|g' "$f"
-            done || true
+          cp -a forest_preview/addons/. addons/
 
+          # Fix Windows-only OBJ material paths using textures that actually ship in the source repo.
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+
+          root = Path(".")
+          mappings = {
+              "C:/Users/Admin/Documents/terrain/terrain mat/ground text/rock text/Rocks007_1K-JPG_Color.jpg":
+                  Path("terrain mat/ground text/rock text/Rocks007_1K-JPG_Color.jpg"),
+              "D:/assets/extracted/rocks/rock 1/textures/procedural_rocks2_Base_Color.png":
+                  Path("env models/rocks/texture/rock 2 base.jpg"),
+              "D:/assets/extracted/rocks/rock 1/textures/procedural_rocks2_Roughness.png":
+                  Path("env models/rocks/texture/rock 2 roughness.jpg"),
+              "D:/assets/extracted/rocks/rock 1/textures/procedural_rocks2_Normal_OpenGL.png":
+                  Path("env models/rocks/texture/rock 2 normal.jpg"),
+              "D:/assets/extracted/rocks/rock 1/textures/procedural_rocks10_Base_Color.png":
+                  Path("env models/rocks/texture/rock 2 base.jpg"),
+              "D:/assets/extracted/rocks/rock 1/textures/procedural_rocks10_Roughness.png":
+                  Path("env models/rocks/texture/rock 2 roughness.jpg"),
+              "D:/assets/extracted/rocks/rock 2/textures/COLOR.tga.png":
+                  Path("env models/rocks/texture/rock 2 base.jpg"),
+          }
+
+          for mtl in Path("env models/rocks").rglob("*.mtl"):
+              data = mtl.read_text(encoding="utf-8", errors="replace")
+              for old, target in mappings.items():
+                  if old in data:
+                      if not target.is_file():
+                          raise SystemExit(f"Replacement texture is missing: {target}")
+                      data = data.replace(old, os.path.relpath(target, mtl.parent))
+              mtl.write_text(data, encoding="utf-8")
+
+          for folder in [Path("env models"), Path("terrain mat"), Path("addons")]:
+              for path in folder.rglob("*"):
+                  if path.is_file() and path.suffix.lower() in {".mtl", ".tscn", ".tres", ".gd", ".cfg", ".gdshader", ".gdshaderinc"}:
+                      data = path.read_text(encoding="utf-8", errors="ignore")
+                      if "D:/assets/extracted/" in data or "C:/Users/Admin/Documents/terrain/" in data:
+                          raise SystemExit(f"Unresolved Windows asset path in {path}")
+          PY
+
+          test -s world.tscn
+          test -s terrain_Data/terrain3d_00_00.res
+          test -s addons/terrain_3d/terrain.gdextension
+          test -s addons/terrain_3d/bin/libterrain.android.debug.arm64.so
+          test -s addons/terrain_3d/bin/libterrain.android.release.arm64.so
       - name: Install Java 17
         uses: actions/setup-java@v4
         with:
@@ -162,12 +202,20 @@ jobs:
           cp ci/debug.keystore "$HOME/.android/debug.keystore"
           chmod 600 ci/debug.keystore
 
-      - name: Export playable Android APK (arm64)
+      - name: Export, package Terrain3D ARM64, and sign Android APK
         run: |
           set -e
-          mkdir -p build
+          mkdir -p build ci/apk-root/lib/arm64-v8a
           godot --headless --verbose --path . --export-debug "Android" build/the_last_memory_forest-unsigned.apk
           test -s build/the_last_memory_forest-unsigned.apk
+
+          # Godot 4.7.2's standard APK export does not reliably place this
+          # project's standalone Terrain3D GDExtension in lib/<abi>; add the
+          # exact debug binary selected by --export-debug before signing.
+          cp addons/terrain_3d/bin/libterrain.android.debug.arm64.so ci/apk-root/lib/arm64-v8a/
+          file ci/apk-root/lib/arm64-v8a/libterrain.android.debug.arm64.so
+          zip -q -u build/the_last_memory_forest-unsigned.apk -j ci/apk-root/lib/arm64-v8a/libterrain.android.debug.arm64.so
+
           "$ANDROID_HOME/build-tools/34.0.0/apksigner" sign --ks ci/debug.keystore --ks-pass pass:android \
             --key-pass pass:android --out build/the_last_memory_forest.apk build/the_last_memory_forest-unsigned.apk
           "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose --print-certs build/the_last_memory_forest.apk
@@ -175,9 +223,8 @@ jobs:
           file build/the_last_memory_forest.apk
           unzip -l build/the_last_memory_forest.apk | grep -q "AndroidManifest.xml"
           unzip -l build/the_last_memory_forest.apk | grep -q "lib/arm64-v8a/libgodot_android.so"
-          unzip -l build/the_last_memory_forest.apk | grep -q "lib/arm64-v8a/libterrain.android.release.arm64.so"
+          unzip -l build/the_last_memory_forest.apk | grep -q "lib/arm64-v8a/libterrain.android.debug.arm64.so"
           ls -lh build/the_last_memory_forest.apk
-
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
